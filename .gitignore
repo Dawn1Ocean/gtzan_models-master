@@ -1,0 +1,5 @@
+*.pt
+*.png
+/logs
+/__pycache__
+/Data
