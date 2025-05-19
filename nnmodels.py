@@ -1,14 +1,10 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
 
-from sklearn.metrics import accuracy_score
-from tqdm import tqdm
+from block import Conv, Bottleneck, PositionalEncoding, MLP
 
-# the device to use
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-print("Using {} device".format(device))
+from utils import device
 
 def weight_init(m):
     if isinstance(m, nn.LazyLinear):
@@ -22,29 +18,6 @@ def weight_init(m):
         nn.init.constant_(m.weight, 1)
         nn.init.constant_(m.bias, 0)
 
-class Conv(nn.Module):
-    def __init__(self, cin, cout, kernel=1, stride=1, p='same', act=nn.SiLU):
-        super().__init__()
-        self.conv = nn.Conv1d(cin, cout, kernel, stride, bias=False, padding=p)
-        self.act = act()
-        self.bn = nn.BatchNorm1d(cout)
-
-    def forward(self, x:torch.Tensor) -> torch.Tensor:
-        return self.bn(self.act(self.conv(x)))
-
-class Bottleneck(nn.Module):
-    def __init__(self, c1, c2, k, s=1, p='same', e=0.5, shortcut=False, act=nn.SiLU):
-        super().__init__()
-        if shortcut:
-            assert c1 == c2
-        
-        self.shortcut = shortcut
-        self.c = int(c2*e)
-        self.cv1 = Conv(c1, self.c, k, s, p, act)
-        self.cv2 = Conv(self.c, c2, k, s, p, act)
-
-    def forward(self, x:torch.Tensor)->torch.Tensor:
-        return self.cv2(self.cv1(x)) + x if self.shortcut else self.cv2(self.cv1(x))
 
 # build the CNN model
 class Data_Model(nn.Module):
@@ -213,81 +186,162 @@ class HybridAudioClassifier(nn.Module):
         
         return output
 
-# define the training function and validation function
-def train_steps(loop, model, criterion, optimizer):
-    train_loss, train_acc = [], []
-    model.train()
-    for step_index, (X, y) in loop:
-        X, y = X.to(device), y.to(device)
-        pred = model(X)
-        loss = criterion(pred, y)
+class TransformerEncoderDecoderClassifier(nn.Module):
+    """使用编码器-解码器结构的Transformer用于序列分类，支持长序列"""
+    def __init__(self, input_dim, num_classes, d_model=64, nhead=4, 
+                 num_encoder_layers=3, num_decoder_layers=3, 
+                 dim_feedforward=256, dropout=0.1, max_seq_length=32,
+                 use_segment_pooling=True, segment_length=64):
+        super(TransformerEncoderDecoderClassifier, self).__init__()
+        
+        self.d_model = d_model
+        self.max_seq_length = max_seq_length
+        self.use_segment_pooling = use_segment_pooling
+        self.segment_length = segment_length
+        
+        # 输入特征嵌入
+        self.input_embedding = nn.Linear(input_dim, d_model)
+        
+        # 位置编码
+        self.pos_encoder = PositionalEncoding(d_model, dropout)
+        
+        # Transformer编码器
+        encoder_layers = nn.TransformerEncoderLayer(
+            d_model=d_model, 
+            nhead=nhead, 
+            dim_feedforward=dim_feedforward, 
+            dropout=dropout,
+            batch_first=True
+        )
+        self.transformer_encoder = nn.TransformerEncoder(
+            encoder_layers, 
+            num_layers=num_encoder_layers
+        )
+        
+        # Transformer解码器
+        decoder_layers = nn.TransformerDecoderLayer(
+            d_model=d_model, 
+            nhead=nhead, 
+            dim_feedforward=dim_feedforward, 
+            dropout=dropout,
+            batch_first=True
+        )
+        self.transformer_decoder = nn.TransformerDecoder(
+            decoder_layers, 
+            num_layers=num_decoder_layers
+        )
+        
+        # 分类标记嵌入（作为解码器的查询）
+        self.cls_token = nn.Parameter(torch.randn(1, 1, d_model))
+        
+        # MLP分类头
+        self.mlp_classifier = MLP(
+            input_dim=d_model,
+            hidden_dim=dim_feedforward,
+            output_dim=num_classes,
+            dropout=dropout
+        )
+        
+    def _process_long_sequence(self, src):
+        """处理长序列：将其分段，分别编码，然后汇集结果"""
+        batch_size, seq_length, _ = src.shape
+        segment_length = self.segment_length
+        
+        # 计算需要的段数
+        num_segments = (seq_length + segment_length - 1) // segment_length
+        
+        # 存储每个段的编码输出
+        segment_outputs = []
+        
+        # 逐段处理
+        for i in range(num_segments):
+            start_idx = i * segment_length
+            end_idx = min((i + 1) * segment_length, seq_length)
+            
+            # 提取当前段
+            segment = src[:, start_idx:end_idx, :]
+            
+            # 编码当前段
+            segment_embedded = self.input_embedding(segment)
+            segment_encoded = self.pos_encoder(segment_embedded)
+            segment_memory = self.transformer_encoder(segment_encoded)
+            
+            # 对当前段进行池化（平均池化）
+            segment_pooled = torch.mean(segment_memory, dim=1, keepdim=True)  # [batch_size, 1, d_model]
+            segment_outputs.append(segment_pooled)
+        
+        # 连接所有段的池化结果
+        pooled_memory = torch.cat(segment_outputs, dim=1)  # [batch_size, num_segments, d_model]
+        
+        # 如果段数超过Transformer的处理能力，可能需要再次池化
+        if num_segments > 500:  # 设置一个安全阈值
+            print(f"警告：序列过长，分割为 {num_segments} 段后仍需进一步池化。考虑增加segment_length值。")
+            # 进一步池化，例如每10个段池化为1个
+            pooling_factor = (num_segments + 499) // 500
+            reduced_segments = []
+            for i in range(0, num_segments, pooling_factor):
+                end = min(i + pooling_factor, num_segments)
+                reduced_segment = torch.mean(pooled_memory[:, i:end, :], dim=1, keepdim=True)
+                reduced_segments.append(reduced_segment)
+            pooled_memory = torch.cat(reduced_segments, dim=1)
+        
+        return pooled_memory
+        
+    def forward(self, src, src_mask=None, src_key_padding_mask=None):
+        """
+        前向传播
+        
+        参数:
+        - src: 输入序列 [batch_size, seq_length]
+        - src_mask: 源序列的注意力掩码
+        - src_key_padding_mask: 源序列的填充掩码
+        
+        返回:
+        - logits: 分类logits [batch_size, num_classes]
+        """
+        batch_size, seq_length = src.shape
+        src = src.view(batch_size, seq_length, 1)
+        
+        # 对于超长序列，使用分段处理
+        if self.use_segment_pooling and seq_length > self.segment_length:
+            memory = self._process_long_sequence(src)
+        else:
+            # 1. 输入嵌入
+            src = self.input_embedding(src)  # [batch_size, seq_length, d_model]
+            
+            # 2. 位置编码
+            src = self.pos_encoder(src)  # [batch_size, seq_length, d_model]
+            
+            # 3. Transformer编码器
+            memory = self.transformer_encoder(
+                src, 
+                mask=src_mask, 
+                src_key_padding_mask=src_key_padding_mask
+            )  # [batch_size, seq_length, d_model]
+        
+        # 4. 准备解码器输入（分类标记）
+        cls_tokens = self.cls_token.expand(batch_size, 1, -1)  # [batch_size, 1, d_model]
+        cls_tokens = self.pos_encoder(cls_tokens)  # 添加位置编码
+        
+        # 5. Transformer解码器
+        # 解码器在训练和推理时只使用一个标记，没有掩码
+        decoder_output = self.transformer_decoder(
+            cls_tokens,  # 目标序列（查询）
+            memory,      # 编码器输出（键和值）
+            tgt_mask=None, 
+            memory_mask=None
+        )  # [batch_size, 1, d_model]
+        
+        # 6. 提取解码器输出的分类标记表示
+        cls_representation = decoder_output.squeeze(1)  # [batch_size, d_model]
+        
+        # 7. 通过MLP分类头
+        logits = self.mlp_classifier(cls_representation)  # [batch_size, num_classes]
+        
+        return logits
 
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-
-        loss = loss.item()
-        train_loss.append(loss)
-        pred_result = torch.argmax(pred, dim=1).detach().cpu().numpy()
-        y = y.detach().cpu().numpy()
-        acc = accuracy_score(y, pred_result)
-        train_acc.append(acc)
-        loop.set_postfix(loss=loss, acc=acc)
-
-    return {"loss": np.mean(train_loss), "acc": np.mean(train_acc), "lr": optimizer.param_groups[0]['lr']}
-
-
-def test_steps(loop, model, criterion):
-    test_loss, test_acc = [], []
-    model.eval()
-    with torch.no_grad():
-        for step_index, (X, y) in loop:
-            X, y = X.to(device), y.to(device)
-            pred = model(X)
-            loss = criterion(pred, y).item()
-
-            test_loss.append(loss)
-            pred_result = torch.argmax(pred, dim=1).detach().cpu().numpy()
-            y = y.detach().cpu().numpy()
-            acc = accuracy_score(y, pred_result)
-            test_acc.append(acc)
-            loop.set_postfix(loss=loss, acc=acc)
-    return {"loss": np.mean(test_loss), "acc": np.mean(test_acc)}
-
-def train_epochs(train_dataloader, test_dataloader, model, criterion, optimizer, config, writer, scheduler):
-    epochs = config['epochs']
-    train_loss_ls, train_loss_acc, test_loss_ls, test_loss_acc, train_lr= [], [], [], [], []
-    for epoch in range(epochs):
-        train_loop = tqdm(enumerate(train_dataloader), total=len(train_dataloader))
-        test_loop = tqdm(enumerate(test_dataloader), total=len(test_dataloader))
-        train_loop.set_description(f'Epoch [{epoch + 1}/{epochs}]')
-        test_loop.set_description(f'Epoch [{epoch + 1}/{epochs}]')
-
-        train_metrix = train_steps(train_loop, model, criterion, optimizer)
-        test_metrix = test_steps(test_loop, model, criterion)
-        scheduler.step()
-
-        train_loss_ls.append(train_metrix['loss'])
-        train_loss_acc.append(train_metrix['acc'])
-        test_loss_ls.append(test_metrix['loss'])
-        test_loss_acc.append(test_metrix['acc'])
-        train_lr.append(train_metrix['lr'])
-
-        tqdm.write(f'Epoch {epoch + 1}: '
-              f'train loss: {train_metrix["loss"]}; '
-              f'train acc: {train_metrix["acc"]}; ')
-        tqdm.write(f'Epoch {epoch + 1}: '
-              f'test loss: {test_metrix["loss"]}; '
-              f'test acc: {test_metrix["acc"]}')
-
-        writer.add_scalar('train/loss', train_metrix['loss'], epoch)
-        writer.add_scalar('train/accuracy', train_metrix['acc'], epoch)
-        writer.add_scalar('validation/loss', test_metrix['loss'], epoch)
-        writer.add_scalar('validation/accuracy', test_metrix['acc'], epoch)
-
-    return {'train_loss': train_loss_ls, 'train_acc': train_loss_acc, 'test_loss': test_loss_ls, 'test_acc': test_loss_acc, 'train_lr': train_lr}
 
 if __name__ == '__main__':
-    model = Data_Model(10).to(device)
-    model.apply(weight_init)
-    model(torch.randn([2, 660000]).to(device))
+    model = TransformerEncoderDecoderClassifier(1, 10).to(device)
+    # model.apply(weight_init)
+    model(torch.randn([2, 160000]).to(device))

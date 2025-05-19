@@ -10,7 +10,9 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-from nnmodels import device
+# the device to use
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+print("Using {} device".format(device))
 
 genre_dict = {
     'blues': 0,
