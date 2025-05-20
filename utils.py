@@ -10,6 +10,8 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
+__all__ = ['device', 'audio_augmentation', 'GenreDataset', 'get_data_set', 'get_feature_set', 'load_data', 'plot_heat_map', 'plot_history']
+
 # the device to use
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("Using {} device".format(device))

@@ -5,7 +5,7 @@ import numpy as np
 
 from utils import device
 
-__all__ = ['Conv', 'Bottleneck']
+__all__ = ['Conv', 'Bottleneck', 'PositionalEncoding', 'MLP']
 
 class Conv(nn.Module):
     def __init__(self, cin, cout, kernel=1, stride=1, p='same', act=nn.SiLU):
@@ -83,10 +83,10 @@ class MLP(nn.Module):
         super(MLP, self).__init__()
         self.layers = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
-            nn.ReLU(),
+            nn.SiLU(),
             nn.Dropout(dropout),
             nn.Linear(hidden_dim, hidden_dim // 2),
-            nn.ReLU(),
+            nn.SiLU(),
             nn.Dropout(dropout),
             nn.Linear(hidden_dim // 2, output_dim)
         )

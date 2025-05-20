@@ -11,7 +11,7 @@ from torch.optim.lr_scheduler import LinearLR, ChainedScheduler
 
 from nnmodels import weight_init, Data_Model, Feature_Model, HybridAudioClassifier, TransformerEncoderDecoderClassifier, CNNTransformerClassifier
 from utils import load_data, plot_history, plot_heat_map, GenreDataset, device
-from trainer import train_epochs
+from trainer import train_epochs, amp_train_epochs
 
 # project root path
 project_path = "./"
@@ -23,10 +23,10 @@ model_path = project_path + "genre_model.pt"
 
 if __name__ == '__main__':
     config = {
-        'seed': 1337,       # the random seed
+        'seed': 42,       # the random seed
         'test_ratio': 0.2,  # the ratio of the test set
-        'epochs': 10,
-        'batch_size': 8,
+        'epochs': 50,
+        'batch_size': 16,
         'lr': 0.0001437,    # initial learning rate
         'data_path': './Data/genres_original',
         'feature_path': './Data/features_30_sec.csv',
@@ -67,7 +67,7 @@ if __name__ == '__main__':
         # define the Tensorboard SummaryWriter
         writer = SummaryWriter(log_dir=log_dir)
         # train and evaluate model
-        history = train_epochs(train_dataloader, test_dataloader, model, criterion, optimizer, config, writer, scheduler)
+        history = amp_train_epochs(train_dataloader, test_dataloader, model, criterion, optimizer, config, writer, scheduler)
         writer.close()
         # save the model
         torch.save(model.state_dict(), model_path)

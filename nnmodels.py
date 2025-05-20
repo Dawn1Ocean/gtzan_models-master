@@ -354,7 +354,7 @@ class CNNTransformerClassifier(TransformerEncoderDecoderClassifier):
     """结合CNN和Transformer的分类器"""
     def __init__(self, input_dim, num_classes=10, d_model=64, nhead=4, 
                  num_encoder_layers=3, num_decoder_layers=3, 
-                 dim_feedforward=256, dropout=0.1, max_seq_length=32,
+                 dim_feedforward=256, dropout=0.1, max_seq_length=128,
                  use_segment_pooling=True, segment_length=2048):
         super(CNNTransformerClassifier, self).__init__(
             input_dim=input_dim,
