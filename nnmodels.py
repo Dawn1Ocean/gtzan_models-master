@@ -6,6 +6,9 @@ from block import Conv, Bottleneck, PositionalEncoding, MLP
 
 from utils import device
 
+__all__ = ['weight_init', 'Data_Model', 'Feature_Model', 'HybridAudioClassifier',
+           'TransformerEncoderDecoderClassifier', 'CNNTransformerClassifier']
+
 def weight_init(m):
     if isinstance(m, nn.LazyLinear):
         pass
@@ -188,10 +191,10 @@ class HybridAudioClassifier(nn.Module):
 
 class TransformerEncoderDecoderClassifier(nn.Module):
     """使用编码器-解码器结构的Transformer用于序列分类，支持长序列"""
-    def __init__(self, input_dim, num_classes, d_model=64, nhead=4, 
+    def __init__(self, input_dim, num_classes=10, d_model=64, nhead=4, 
                  num_encoder_layers=3, num_decoder_layers=3, 
                  dim_feedforward=256, dropout=0.1, max_seq_length=32,
-                 use_segment_pooling=True, segment_length=64):
+                 use_segment_pooling=True, segment_length=2048):
         super(TransformerEncoderDecoderClassifier, self).__init__()
         
         self.d_model = d_model
@@ -200,7 +203,7 @@ class TransformerEncoderDecoderClassifier(nn.Module):
         self.segment_length = segment_length
         
         # 输入特征嵌入
-        self.input_embedding = nn.Linear(input_dim, d_model)
+        self.emb = nn.Linear(input_dim, d_model)
         
         # 位置编码
         self.pos_encoder = PositionalEncoding(d_model, dropout)
@@ -241,8 +244,14 @@ class TransformerEncoderDecoderClassifier(nn.Module):
             output_dim=num_classes,
             dropout=dropout
         )
+
+        self.act = nn.Softmax(dim=1)
         
-    def _process_long_sequence(self, src):
+    def _input_embedding(self, src:torch.Tensor)->torch.Tensor:
+        """输入嵌入：将输入序列嵌入到d_model维度"""
+        return self.emb(src)
+
+    def _process_long_sequence(self, src:torch.Tensor)->torch.Tensor:
         """处理长序列：将其分段，分别编码，然后汇集结果"""
         batch_size, seq_length, _ = src.shape
         segment_length = self.segment_length
@@ -262,7 +271,7 @@ class TransformerEncoderDecoderClassifier(nn.Module):
             segment = src[:, start_idx:end_idx, :]
             
             # 编码当前段
-            segment_embedded = self.input_embedding(segment)
+            segment_embedded = self._input_embedding(segment)
             segment_encoded = self.pos_encoder(segment_embedded)
             segment_memory = self.transformer_encoder(segment_encoded)
             
@@ -287,7 +296,7 @@ class TransformerEncoderDecoderClassifier(nn.Module):
         
         return pooled_memory
         
-    def forward(self, src, src_mask=None, src_key_padding_mask=None):
+    def forward(self, src:torch.Tensor, src_mask=None, src_key_padding_mask=None)->torch.Tensor:
         """
         前向传播
         
@@ -338,10 +347,42 @@ class TransformerEncoderDecoderClassifier(nn.Module):
         # 7. 通过MLP分类头
         logits = self.mlp_classifier(cls_representation)  # [batch_size, num_classes]
         
-        return logits
+        return self.act(logits)
 
+
+class CNNTransformerClassifier(TransformerEncoderDecoderClassifier):
+    """结合CNN和Transformer的分类器"""
+    def __init__(self, input_dim, num_classes=10, d_model=64, nhead=4, 
+                 num_encoder_layers=3, num_decoder_layers=3, 
+                 dim_feedforward=256, dropout=0.1, max_seq_length=32,
+                 use_segment_pooling=True, segment_length=2048):
+        super(CNNTransformerClassifier, self).__init__(
+            input_dim=input_dim,
+            num_classes=num_classes,
+            d_model=d_model,
+            nhead=nhead,
+            num_encoder_layers=num_encoder_layers,
+            num_decoder_layers=num_decoder_layers,
+            dim_feedforward=dim_feedforward,
+            dropout=dropout,
+            max_seq_length=max_seq_length,
+            use_segment_pooling=use_segment_pooling,
+            segment_length=segment_length
+        )
+        
+        # CNN特征提取分支
+        self.emb = nn.Sequential(
+            Conv(1, 16, 11, 4, 1),
+            Conv(16, 64, 11, 4, 1),
+        )
+    
+    def _input_embedding(self, src:torch.Tensor)->torch.Tensor:
+        src = src.permute(0, 2, 1).contiguous() # [batch_size, d_model, seq_length]
+        src = self.emb(src)
+        src = src.permute(0, 2, 1).contiguous() # [batch_size, seq_length, d_model]
+        return src
 
 if __name__ == '__main__':
-    model = TransformerEncoderDecoderClassifier(1, 10).to(device)
-    # model.apply(weight_init)
+    model = CNNTransformerClassifier(1, 10).to(device)
+    model.apply(weight_init)
     model(torch.randn([2, 160000]).to(device))

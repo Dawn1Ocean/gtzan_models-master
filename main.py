@@ -9,7 +9,7 @@ from torchinfo import summary
 from torch.utils.tensorboard import SummaryWriter
 from torch.optim.lr_scheduler import LinearLR, ChainedScheduler
 
-from nnmodels import weight_init, Data_Model, Feature_Model, HybridAudioClassifier, TransformerEncoderDecoderClassifier
+from nnmodels import weight_init, Data_Model, Feature_Model, HybridAudioClassifier, TransformerEncoderDecoderClassifier, CNNTransformerClassifier
 from utils import load_data, plot_history, plot_heat_map, GenreDataset, device
 from trainer import train_epochs
 
@@ -25,7 +25,7 @@ if __name__ == '__main__':
     config = {
         'seed': 1337,       # the random seed
         'test_ratio': 0.2,  # the ratio of the test set
-        'epochs': 150,
+        'epochs': 10,
         'batch_size': 8,
         'lr': 0.0001437,    # initial learning rate
         'data_path': './Data/genres_original',
@@ -47,7 +47,7 @@ if __name__ == '__main__':
 
     # define the model
     # model = Data_Model(X_train.shape[1], np.max(y_train) + 1).to(device)
-    model = TransformerEncoderDecoderClassifier(1, np.max(y_train) + 1).to(device)
+    model = CNNTransformerClassifier(1, 10).to(device)
     model.apply(weight_init)
     if os.path.exists(model_path) and not config['isDev']:
         # import the pre-trained model if it exists
