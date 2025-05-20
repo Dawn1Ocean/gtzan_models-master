@@ -11,7 +11,7 @@ from torch.optim.lr_scheduler import LinearLR, ChainedScheduler
 
 from nnmodels import weight_init, Data_Model, Feature_Model, HybridAudioClassifier, TransformerEncoderDecoderClassifier, CNNTransformerClassifier
 from utils import load_data, plot_history, plot_heat_map, GenreDataset, device
-from trainer import train_epochs, amp_train_epochs
+from trainer import train_epochs
 
 # project root path
 project_path = "./"
@@ -25,14 +25,14 @@ if __name__ == '__main__':
     config = {
         'seed': 42,       # the random seed
         'test_ratio': 0.2,  # the ratio of the test set
-        'epochs': 50,
-        'batch_size': 16,
+        'epochs': 300,
+        'batch_size': 96,
         'lr': 0.0001437,    # initial learning rate
         'data_path': './Data/genres_original',
         'feature_path': './Data/features_30_sec.csv',
         'isDev': True,      # True -> Train new model anyway
         'isFeature': False, # True -> Trainset = features; False -> Trainset = Datas
-        'data_length': 160000,  # If isFeature == False
+        'data_length': 660000,  # If isFeature == False
     }
 
     # X_train, y_train is the training set
@@ -58,8 +58,8 @@ if __name__ == '__main__':
         # build the CNN model
         model = model.to(device)
         criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
-        optimizer = torch.optim.AdamW(model.parameters(), lr=config['lr'], amsgrad=True)
-        scheduler = ChainedScheduler([LinearLR(optimizer, total_iters=4), LinearLR(optimizer, start_factor=1, end_factor=0.2, total_iters=config['epochs'])], optimizer=optimizer)
+        optimizer = torch.optim.AdamW(model.parameters(), lr=config['lr'])
+        scheduler = ChainedScheduler([LinearLR(optimizer, total_iters=3), LinearLR(optimizer, start_factor=1, end_factor=0.01, total_iters=config['epochs'])], optimizer=optimizer)
 
         # print the model structure if there is not any lazy layers in Net
         # summary(model, (config['batch_size'], X_train.shape[1]), col_names=["input_size", "kernel_size", "output_size"], verbose=2)
@@ -67,7 +67,7 @@ if __name__ == '__main__':
         # define the Tensorboard SummaryWriter
         writer = SummaryWriter(log_dir=log_dir)
         # train and evaluate model
-        history = amp_train_epochs(train_dataloader, test_dataloader, model, criterion, optimizer, config, writer, scheduler)
+        history = train_epochs(train_dataloader, test_dataloader, model, criterion, optimizer, config, writer, scheduler, scaler=torch.GradScaler())
         writer.close()
         # save the model
         torch.save(model.state_dict(), model_path)

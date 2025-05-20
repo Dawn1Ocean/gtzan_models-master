@@ -10,7 +10,7 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-__all__ = ['device', 'audio_augmentation', 'GenreDataset', 'get_data_set', 'get_feature_set', 'load_data', 'plot_heat_map', 'plot_history']
+__all__ = ['device', 'GenreDataset', 'get_data_set', 'get_feature_set', 'load_data', 'plot_heat_map', 'plot_history']
 
 # the device to use
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -63,7 +63,7 @@ def get_data_set(data_path, data_length):
             genre = file.split('.')[0]
             try:
                 data, sr = librosa.load(os.path.join(root, file))
-                data = librosa.resample(data, orig_sr=sr, target_sr=sr//4)
+                data = librosa.resample(data, orig_sr=sr, target_sr=sr)
                 dataset = np.vstack((dataset, data[:data_length]))
                 labelset.append(genre_dict[genre])
             except RuntimeError as e:

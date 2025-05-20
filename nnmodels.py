@@ -316,7 +316,7 @@ class TransformerEncoderDecoderClassifier(nn.Module):
             memory = self._process_long_sequence(src)
         else:
             # 1. 输入嵌入
-            src = self.input_embedding(src)  # [batch_size, seq_length, d_model]
+            src = self._input_embedding(src)  # [batch_size, seq_length, d_model]
             
             # 2. 位置编码
             src = self.pos_encoder(src)  # [batch_size, seq_length, d_model]
@@ -352,9 +352,9 @@ class TransformerEncoderDecoderClassifier(nn.Module):
 
 class CNNTransformerClassifier(TransformerEncoderDecoderClassifier):
     """结合CNN和Transformer的分类器"""
-    def __init__(self, input_dim, num_classes=10, d_model=64, nhead=4, 
+    def __init__(self, input_dim, num_classes=10, d_model=128, nhead=8, 
                  num_encoder_layers=3, num_decoder_layers=3, 
-                 dim_feedforward=256, dropout=0.1, max_seq_length=128,
+                 dim_feedforward=512, dropout=0.2, max_seq_length=128,
                  use_segment_pooling=True, segment_length=2048):
         super(CNNTransformerClassifier, self).__init__(
             input_dim=input_dim,
@@ -372,8 +372,9 @@ class CNNTransformerClassifier(TransformerEncoderDecoderClassifier):
         
         # CNN特征提取分支
         self.emb = nn.Sequential(
-            Conv(1, 16, 11, 4, 1),
-            Conv(16, 64, 11, 4, 1),
+            Conv(1, 16, 37, 4, 1),
+            Conv(16, 64, 37, 4, 1),
+            Conv(64, d_model, 37, 1)
         )
     
     def _input_embedding(self, src:torch.Tensor)->torch.Tensor:
@@ -385,4 +386,4 @@ class CNNTransformerClassifier(TransformerEncoderDecoderClassifier):
 if __name__ == '__main__':
     model = CNNTransformerClassifier(1, 10).to(device)
     model.apply(weight_init)
-    model(torch.randn([2, 160000]).to(device))
+    model(torch.randn([96, 160000]).to(device))
