@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from block import Conv, Bottleneck, PositionalEncoding, MLP
+from block import Conv, Conv2d_Block, Bottleneck, PositionalEncoding, MLP
 
 from utils import device
 
@@ -15,9 +15,9 @@ def weight_init(m):
     elif isinstance(m, nn.Linear):
         nn.init.xavier_normal_(m.weight)
         nn.init.constant_(m.bias, 0)
-    elif isinstance(m, nn.Conv1d):
+    elif isinstance(m, nn.Conv1d) or isinstance(m, nn.Conv2d):
         nn.init.kaiming_normal_(m.weight)
-    elif isinstance(m, nn.BatchNorm1d):
+    elif isinstance(m, nn.BatchNorm1d) or isinstance(m, nn.BatchNorm2d):
         nn.init.constant_(m.weight, 1)
         nn.init.constant_(m.bias, 0)
 
@@ -383,7 +383,36 @@ class CNNTransformerClassifier(TransformerEncoderDecoderClassifier):
         src = src.permute(0, 2, 1).contiguous() # [batch_size, seq_length, d_model]
         return src
 
+# build the 2D-CNN model
+class Mel_Model(nn.Module):
+    def __init__(self, label_d, c=16, k=3, s=1):
+        super().__init__()
+        self.conv = nn.Sequential(
+            Conv2d_Block(1, c, k, s, 1),
+            Conv2d_Block(c, 4*c, k, s, 1),
+            Conv2d_Block(4*c, 8*c, k, s, 1),
+            Conv2d_Block(8*c, 8*c, k, s, 1),
+        )
+        self.flatten = nn.Flatten()
+        self.fc = nn.Sequential(nn.LazyLinear(8*c),
+                                 nn.SiLU(),
+                                 nn.BatchNorm1d(8*c),)
+        self.mlp = MLP(8*c, 4*c, label_d, dropout=0.3)
+        self.act = nn.Softmax(dim=1)
+
+    def forward(self, x):
+        # x.shape = (batch_size, input_d)
+        B, H, W = x.shape
+        x = x.view(B, 1, H, W)
+        x = self.conv(x)
+        x = self.flatten(x)
+        x = self.fc(x)
+        x = self.mlp(x)
+        x = self.act(x)
+        return x
+
 if __name__ == '__main__':
-    model = CNNTransformerClassifier(1, 10).to(device)
+    # model = CNNTransformerClassifier(1, 10).to(device)
+    model = Mel_Model(10).to(device)
     model.apply(weight_init)
-    model(torch.randn([96, 160000]).to(device))
+    model(torch.randn([96, 1600, 1600]).to(device))

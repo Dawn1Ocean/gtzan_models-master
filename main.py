@@ -9,7 +9,7 @@ from torchinfo import summary
 from torch.utils.tensorboard import SummaryWriter
 from torch.optim.lr_scheduler import LinearLR, ChainedScheduler
 
-from nnmodels import weight_init, Data_Model, Feature_Model, HybridAudioClassifier, TransformerEncoderDecoderClassifier, CNNTransformerClassifier
+from nnmodels import weight_init, Data_Model, Feature_Model, HybridAudioClassifier, TransformerEncoderDecoderClassifier, CNNTransformerClassifier, Mel_Model
 from utils import load_data, plot_history, plot_heat_map, GenreDataset, device
 from trainer import train_epochs
 
@@ -25,29 +25,38 @@ if __name__ == '__main__':
     config = {
         'seed': 42,       # the random seed
         'test_ratio': 0.2,  # the ratio of the test set
-        'epochs': 300,
+        'epochs': 100,
         'batch_size': 96,
         'lr': 0.0001437,    # initial learning rate
         'data_path': './Data/genres_original',
         'feature_path': './Data/features_30_sec.csv',
         'isDev': True,      # True -> Train new model anyway
-        'isFeature': False, # True -> Trainset = features; False -> Trainset = Datas
-        'data_length': 660000,  # If isFeature == False
+        'dataset': 'mel', # 'feature' -> Trainset = features; 'original' -> Trainset = Datas; 'mel' -> Trainset = melspectrogram
+        'data_length': 660000,  # If dataset != 'feature'
+        'optimizer': torch.optim.AdamW,
+        'scheduler': {
+            'start_iters': 3,
+            'start_factor': 1,
+            'end_factor': 0.2,
+        }
     }
 
     # X_train, y_train is the training set
     # X_test, y_test is the test set
-    if config['isFeature']:
-        X_train, X_test, y_train, y_test = load_data(config['test_ratio'], config['seed'], config['feature_path'], type='feature')
-    else:
-        X_train, X_test, y_train, y_test = load_data(config['test_ratio'], config['seed'], config['data_path'], config['data_length'], type='data')
+    match config['dataset']:
+        case 'original':
+            X_train, X_test, y_train, y_test = load_data(config['test_ratio'], config['seed'], config['data_path'], config['data_length'], type='data')
+            model = CNNTransformerClassifier(1, 10).to(device)
+        case 'feature':
+            X_train, X_test, y_train, y_test = load_data(config['test_ratio'], config['seed'], config['feature_path'], type='feature')
+            model = CNNTransformerClassifier(1, 10).to(device)
+        case 'mel':
+            X_train, X_test, y_train, y_test = load_data(config['test_ratio'], config['seed'], config['data_path'], config['data_length'], type='mel')
+            model = Mel_Model(10).to(device)
     train_dataset, test_dataset = GenreDataset(X_train, y_train), GenreDataset(X_test, y_test)
     train_dataloader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=True)
     test_dataloader = DataLoader(test_dataset, batch_size=config['batch_size'], shuffle=False)
 
-    # define the model
-    # model = Data_Model(X_train.shape[1], np.max(y_train) + 1).to(device)
-    model = CNNTransformerClassifier(1, 10).to(device)
     model.apply(weight_init)
     if os.path.exists(model_path) and not config['isDev']:
         # import the pre-trained model if it exists
@@ -55,11 +64,17 @@ if __name__ == '__main__':
         model.load_state_dict(torch.load(model_path))
         model.eval()
     else:
-        # build the CNN model
         model = model.to(device)
         criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
-        optimizer = torch.optim.AdamW(model.parameters(), lr=config['lr'])
-        scheduler = ChainedScheduler([LinearLR(optimizer, total_iters=3), LinearLR(optimizer, start_factor=1, end_factor=0.01, total_iters=config['epochs'])], optimizer=optimizer)
+        optimizer = config['optimizer'](model.parameters(), lr=config['lr'])
+        scheduler = ChainedScheduler([
+            LinearLR(optimizer, 
+                    total_iters=config['scheduler']['start_iters']), 
+            LinearLR(optimizer, 
+                    start_factor=config['scheduler']['start_factor'], 
+                    end_factor=config['scheduler']['end_factor'], 
+                    total_iters=config['epochs'])]
+            , optimizer=optimizer)
 
         # print the model structure if there is not any lazy layers in Net
         # summary(model, (config['batch_size'], X_train.shape[1]), col_names=["input_size", "kernel_size", "output_size"], verbose=2)

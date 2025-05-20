@@ -35,10 +35,18 @@ def audio_augmentation(audio):
     # augmented = audio * scale_factor
     
     # 随机高斯噪声
-    noise = torch.randn_like(audio) * 0.01
+    noise = np.random.randn(*audio.shape) * 0.01
     audio += noise
     
     return audio
+
+def mel_spectrogram(file_path, data_length, isLog=True):
+    data, sr = librosa.load(file_path)
+    mid_data, mid_samp = len(data) // 2, data_length // 2
+    mel = librosa.feature.melspectrogram(y=data[mid_data - mid_samp: mid_data + mid_samp], sr=sr)
+    if isLog:
+        return librosa.amplitude_to_db(mel, ref=np.max)
+    return mel
 
 # define the dataset class
 class GenreDataset(Dataset):
@@ -47,12 +55,28 @@ class GenreDataset(Dataset):
         self.y = y
 
     def __getitem__(self, index):
-        x = audio_augmentation(torch.tensor(self.x[index], dtype=torch.float32)).to(device)
+        x = torch.tensor(self.x[index], dtype=torch.float32).to(device)
         y = torch.tensor(self.y[index], dtype=torch.long).to(device)
         return x, y
 
     def __len__(self):
         return len(self.x)
+    
+def get_mel_set(data_path, data_length):
+    dataset, labelset = [], []
+    # dataset: the melspectrogram of music
+    # labelset: convert blues/classical/country/disco/hiphop/jazz/metal/pop/reggae/rock to 0/1/2/3/4/5/6/7/8/9 in order
+    for root, _, files in os.walk(data_path):
+        for file in tqdm(files, desc=f'{os.path.basename(root).ljust(10)}'):
+            genre = file.split('.')[0]
+            try:
+                dataset.append(mel_spectrogram(os.path.join(root, file), data_length))
+                labelset.append(genre_dict[genre])
+            except RuntimeError:
+                pass
+            except AttributeError:
+                tqdm.write('There\'s something wrong in ' + file)        
+    return dataset, labelset
     
 def get_data_set(data_path, data_length):
     dataset, labelset = np.zeros((1, data_length)), []
@@ -70,7 +94,7 @@ def get_data_set(data_path, data_length):
                 pass
             except AttributeError as e:
                 tqdm.write('There\'s something wrong in ' + file)        
-    return dataset[1:,:], labelset
+    return audio_augmentation(dataset[1:,:]), labelset
 
 def get_feature_set(data_path):
     # dataset: features of the segment of music
@@ -87,7 +111,13 @@ def get_feature_set(data_path):
 
 # load dataset and preprocess
 def load_data(ratio, random_seed, data_path, data_length, type='feature'):
-    dataset, labelset = get_feature_set(data_path) if type == 'feature' else get_data_set(data_path, data_length)
+    match type:
+        case 'feature':
+            dataset, labelset = get_feature_set(data_path)
+        case 'data':
+            dataset, labelset = get_data_set(data_path, data_length)
+        case 'mel':
+            dataset, labelset = get_mel_set(data_path, data_length)
     # reshape the data and split the dataset
     dataset = np.array(dataset)
     labelset = np.array(labelset).reshape(-1)
