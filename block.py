@@ -10,12 +10,14 @@ __all__ = ['Conv', 'Bottleneck', 'PositionalEncoding', 'MLP']
 class Conv(nn.Module):
     def __init__(self, cin, cout, kernel=1, stride=1, p='same', act=nn.SiLU):
         super().__init__()
-        self.conv = nn.Conv1d(cin, cout, kernel, stride, bias=False, padding=p)
-        self.bn = nn.BatchNorm1d(cout)
-        self.act = act()
+        self.m = nn.Sequential(
+            nn.Conv1d(cin, cout, kernel, stride, bias=False, padding=p),
+            nn.BatchNorm1d(cout),
+            act()
+        )
 
     def forward(self, x:torch.Tensor) -> torch.Tensor:
-        return self.bn(self.act(self.conv(x)))
+        return self.m(x)
 
 
 class Bottleneck(nn.Module):
