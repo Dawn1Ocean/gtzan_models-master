@@ -5,19 +5,17 @@ import numpy as np
 
 from utils import device
 
-__all__ = ['Conv', 'Bottleneck', 'PositionalEncoding', 'MLP']
+__all__ = ['Conv', 'Bottleneck', 'PositionalEncoding', 'MLP', 'Conv2d', 'CBS2d']
 
 class Conv(nn.Module):
     def __init__(self, cin, cout, kernel=1, stride=1, p='same', act=nn.SiLU):
         super().__init__()
-        self.m = nn.Sequential(
-            nn.Conv1d(cin, cout, kernel, stride, bias=False, padding=p),
-            nn.BatchNorm1d(cout),
-            act()
-        )
+        self.conv = nn.Conv1d(cin, cout, kernel, stride, bias=False, padding=p)
+        self.bn = nn.BatchNorm1d(cout),
+        self.act = act()
 
     def forward(self, x:torch.Tensor) -> torch.Tensor:
-        return self.m(x)
+        return self.act(self.bn(self.conv(x)))
 
 
 class Bottleneck(nn.Module):
@@ -109,3 +107,8 @@ class Conv2d(nn.Module):
     def forward(self, x:torch.Tensor) -> torch.Tensor:
         return self.m(x)
     
+class CBS2d(Conv):
+    def __init__(self, c1, c2, k=1, s=1, p='same', act=nn.SiLU):
+        super().__init__(c1, c2, k, s, p, act)
+        self.conv = nn.Conv2d(c1, c2, k, s, p, bias=False)
+        self.bn = nn.BatchNorm2d(c2)
