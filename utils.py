@@ -13,7 +13,11 @@ from tqdm import tqdm
 __all__ = ['device', 'GenreDataset', 'get_data_set', 'get_feature_set', 'load_data', 'plot_heat_map', 'plot_history']
 
 # the device to use
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cpu")
+if torch.cuda.is_available():
+    device = torch.device("cuda:0")
+elif torch.backends.mps.is_available():
+    device = torch.device("mps")
 print("Using {} device".format(device))
 
 genre_dict = {

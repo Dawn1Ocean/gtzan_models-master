@@ -415,4 +415,4 @@ if __name__ == '__main__':
     # model = CNNTransformerClassifier(1, 10).to(device)
     model = Mel_Model(10).to(device)
     model.apply(weight_init)
-    model(torch.randn([96, 1600, 1600]).to(device))
+    model(torch.randn([12, 1600, 1600]).to(device))
