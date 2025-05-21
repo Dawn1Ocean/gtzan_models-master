@@ -1,3 +1,9 @@
+# Installation
+
+```bash
+uv sync
+```
+
 # gtzan_models
 
 ```Python

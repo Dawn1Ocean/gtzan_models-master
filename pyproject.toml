@@ -1,0 +1,17 @@
+[project]
+name = "gtzan-models-master"
+version = "0.1.0"
+description = "gtzan-models"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "librosa",
+    "matplotlib",
+    "numpy",
+    "scikit_learn",
+    "seaborn",
+    "torch",
+    "torchinfo",
+    "tqdm",
+    "tensorboard",
+]

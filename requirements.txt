@@ -3,7 +3,7 @@ matplotlib
 numpy
 scikit_learn
 seaborn
-torch==2.7.0+cu128
-torchinfo==1.8.0
+torch
+torchinfo
 tqdm
 tensorboard
