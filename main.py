@@ -9,7 +9,7 @@ from torchinfo import summary
 from torch.utils.tensorboard import SummaryWriter
 from torch.optim.lr_scheduler import LinearLR, ChainedScheduler
 
-from nnmodels import weight_init, Data_Model, Feature_Model, HybridAudioClassifier, TransformerEncoderDecoderClassifier, CNNTransformerClassifier, Mel_Model
+from nnmodels import weight_init, Data_Model, Feature_Model, HybridAudioClassifier, TransformerEncoderDecoderClassifier, CNNTransformerClassifier, Mel_Model, Mel_Attention_Model
 from utils import load_data, plot_history, plot_heat_map, GenreDataset, device
 from trainer import train_epochs
 
@@ -25,8 +25,8 @@ if __name__ == '__main__':
     config = {
         'seed': 42,       # the random seed
         'test_ratio': 0.2,  # the ratio of the test set
-        'epochs': 100,
-        'batch_size': 96,
+        'epochs': 220,
+        'batch_size': 64,
         'lr': 0.0001437,    # initial learning rate
         'data_path': './Data/genres_original',
         'feature_path': './Data/features_30_sec.csv',
@@ -37,7 +37,7 @@ if __name__ == '__main__':
         'scheduler': {
             'start_iters': 3,
             'start_factor': 1,
-            'end_factor': 0.2,
+            'end_factor': 0.25,
         }
     }
 
@@ -52,7 +52,7 @@ if __name__ == '__main__':
             model = CNNTransformerClassifier(1, 10).to(device)
         case 'mel':
             X_train, X_test, y_train, y_test = load_data(config['test_ratio'], config['seed'], config['data_path'], config['data_length'], type='mel')
-            model = Mel_Model(10).to(device)
+            model = Mel_Attention_Model(10).to(device)
     train_dataset, test_dataset = GenreDataset(X_train, y_train), GenreDataset(X_test, y_test)
     train_dataloader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=True)
     test_dataloader = DataLoader(test_dataset, batch_size=config['batch_size'], shuffle=False)

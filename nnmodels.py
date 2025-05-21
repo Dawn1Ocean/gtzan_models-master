@@ -394,10 +394,10 @@ class Mel_Model(nn.Module):
             Conv2d(8*c, 8*c, k, s, 1),
         )
         self.flatten = nn.Flatten()
-        self.fc = nn.Sequential(nn.LazyLinear(8*c),
+        self.fc = nn.Sequential(nn.LazyLinear(32*c),
                                  nn.SiLU(),
-                                 nn.BatchNorm1d(8*c),)
-        self.mlp = MLP(8*c, 4*c, label_d, dropout=0.3)
+                                 nn.BatchNorm1d(32*c),)
+        self.mlp = MLP(32*c, 16*c, label_d, dropout=0.75)
         self.act = nn.Softmax(dim=1)
 
     def forward(self, x):
@@ -410,9 +410,51 @@ class Mel_Model(nn.Module):
         x = self.mlp(x)
         x = self.act(x)
         return x
+    
+class Mel_Attention_Model(nn.Module):
+    def __init__(self, label_d, c=16, k=3, s=1):
+        super().__init__()
+        self.conv = nn.Sequential(
+            Conv2d(1, c, k, s, 1),
+            Conv2d(c, 4*c, k, s, 1),
+            Conv2d(4*c, 8*c, k, s, 1),
+            nn.Conv2d(8*c, 8*c, k, s, 1),
+            nn.BatchNorm2d(8*c),
+            nn.SiLU(),
+            nn.AdaptiveAvgPool2d(1),
+        )
+
+        # 注意力机制模块
+        self.attention = nn.MultiheadAttention(
+            embed_dim=8*c,
+            num_heads=4,
+            batch_first=True
+        )
+        self.flatten = nn.Flatten()
+        self.fc = nn.Sequential(nn.LazyLinear(32*c),
+                                 nn.SiLU(),
+                                 nn.BatchNorm1d(32*c),)
+        self.mlp = MLP(32*c, 16*c, label_d, dropout=0.6)
+        self.act = nn.Softmax(dim=1)
+
+    def forward(self, x):
+        # x.shape = (batch_size, input_d)
+        B, H, W = x.shape
+        x = x.view(B, 1, H, W)
+        x = self.conv(x)
+        conv_out = x.view(B, -1)  # [B,8c]
+        
+        # 注意力机制（添加维度适配）
+        query = conv_out.unsqueeze(1)    # [B,1,8c]
+        attn_out, _ = self.attention(query, query, query)
+        attn_out = attn_out.squeeze(1)  # [B,8c]
+        x = self.fc(attn_out)
+        x = self.mlp(x)
+        x = self.act(x)
+        return x
 
 if __name__ == '__main__':
     # model = CNNTransformerClassifier(1, 10).to(device)
-    model = Mel_Model(10).to(device)
+    model = Mel_Attention_Model(10).to(device)
     model.apply(weight_init)
-    model(torch.randn([12, 1600, 1600]).to(device))
+    model(torch.randn([12, 128, 129]).to(device))
