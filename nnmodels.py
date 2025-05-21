@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from block import Conv, Conv2d_Block, Bottleneck, PositionalEncoding, MLP
+from block import Conv, Conv2d, Bottleneck, PositionalEncoding, MLP
 
 from utils import device
 
@@ -388,10 +388,10 @@ class Mel_Model(nn.Module):
     def __init__(self, label_d, c=16, k=3, s=1):
         super().__init__()
         self.conv = nn.Sequential(
-            Conv2d_Block(1, c, k, s, 1),
-            Conv2d_Block(c, 4*c, k, s, 1),
-            Conv2d_Block(4*c, 8*c, k, s, 1),
-            Conv2d_Block(8*c, 8*c, k, s, 1),
+            Conv2d(1, c, k, s, 1),
+            Conv2d(c, 4*c, k, s, 1),
+            Conv2d(4*c, 8*c, k, s, 1),
+            Conv2d(8*c, 8*c, k, s, 1),
         )
         self.flatten = nn.Flatten()
         self.fc = nn.Sequential(nn.LazyLinear(8*c),

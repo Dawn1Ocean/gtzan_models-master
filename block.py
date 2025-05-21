@@ -96,7 +96,7 @@ class MLP(nn.Module):
     def forward(self, x):
         return self.layers(x)
     
-class Conv2d_Block(nn.Module):
+class Conv2d(nn.Module):
     def __init__(self, cin, cout, kernel=1, stride=1, p='same', act=nn.SiLU):
         super().__init__()
         self.m = nn.Sequential(
