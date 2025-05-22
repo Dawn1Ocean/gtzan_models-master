@@ -47,7 +47,8 @@ if __name__ == '__main__':
             'start_iters': 3,
             'start_factor': 1,
             'end_factor': 0.01,
-        }
+        },
+        'show': False, # plotting
     }
 
     # X_train, y_train is the training set
@@ -103,7 +104,7 @@ if __name__ == '__main__':
         # save the model
         torch.save(model.state_dict(), model_path)
         # plot the training history
-        plot_history(history)
+        plot_history(history, config['show'])
 
     # predict the class of test data
     y_pred, y_truth = [], []
@@ -116,4 +117,4 @@ if __name__ == '__main__':
             y_pred.extend(pred_result)
             y_truth.extend(y.detach().cpu().numpy())
     # plot confusion matrix heat map
-    plot_heat_map(y_truth, y_pred)
+    plot_heat_map(y_truth, y_pred, config['show'])

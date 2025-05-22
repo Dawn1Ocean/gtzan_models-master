@@ -111,7 +111,6 @@ def get_data_set(data_path, data_length):
     # dataset: the segment of music
     # labelset: convert blues/classical/country/disco/hiphop/jazz/metal/pop/reggae/rock to 0/1/2/3/4/5/6/7/8/9 in order
     for root, _, files in os.walk(data_path):
-        i=0
         for file in tqdm(files, desc=f'{os.path.basename(root).ljust(10)}'):
             genre = file.split('.')[0]
             try:
@@ -123,9 +122,6 @@ def get_data_set(data_path, data_length):
                 pass
             except AttributeError as e:
                 tqdm.write('There\'s something wrong in ' + file)
-            # i+=1
-            # if i > 50:
-            #     break
     return dataset[1:,:], labelset
 
 def get_feature_set(data_path):
@@ -159,7 +155,7 @@ def load_data(ratio, random_seed, data_path, data_length=None, type='feature'):
     return X_train, X_test, y_train, y_test
 
 # confusion matrix
-def plot_heat_map(y_test, y_pred):
+def plot_heat_map(y_test, y_pred, show=False):
     con_mat = confusion_matrix(y_test, y_pred)
     # normalize
     # con_mat_norm = con_mat.astype('float') / con_mat.sum(axis=1)[:, np.newaxis]
@@ -174,9 +170,10 @@ def plot_heat_map(y_test, y_pred):
     plt.ylabel('True labels')
     plt.title('Confusion Matrix')
     plt.savefig('confusion_matrix.png')
-    plt.show()
+    if show:
+        plt.show()
 
-def plot_history(history):
+def plot_history(history, show=False):
     plt.figure(figsize=(8, 8))
     plt.plot(history['train_acc'])
     plt.plot(history['test_acc'])
@@ -185,7 +182,8 @@ def plot_history(history):
     plt.xlabel('Epoch')
     plt.legend(['Train', 'Test'], loc='upper left')
     plt.savefig('accuracy.png')
-    plt.show()
+    if show:
+        plt.show()
 
     plt.figure(figsize=(8, 8))
     plt.plot(history['train_loss'])
@@ -195,7 +193,8 @@ def plot_history(history):
     plt.xlabel('Epoch')
     plt.legend(['Train', 'Test'], loc='upper left')
     plt.savefig('loss.png')
-    plt.show()
+    if show:
+        plt.show()
 
     plt.figure(figsize=(8, 8))
     plt.plot(history['train_lr'])
@@ -204,4 +203,5 @@ def plot_history(history):
     plt.xlabel('Epoch')
     # plt.legend(['Train', 'Test'], loc='upper left')
     plt.savefig('lr.png')
-    plt.show()
+    if show:
+        plt.show()
