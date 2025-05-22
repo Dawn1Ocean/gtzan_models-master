@@ -53,35 +53,30 @@ def mel_spectrogram(file_path, data_length, isLog=True):
         return librosa.amplitude_to_db(mel, ref=np.max)
     return mel
 
-# define the dataset class
+# define the dataset class  
 class GenreDataset(Dataset):
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
+    def __init__(self, x, y, sr=22050, val=False, mel=False, aug=False):
+        assert len(x) == len(y), "The length of x and y must be the same"
+        assert len(x) > 0, "The length of x must be greater than 0"
+        assert (val is True and aug is True) is False, "val and aug cannot be True at the same time"
 
-    def __getitem__(self, index):
-        x = torch.tensor(self.x[index], dtype=torch.float32).to(device)
-        y = torch.tensor(self.y[index], dtype=torch.long).to(device)
-        return x, y
-
-    def __len__(self):
-        return len(self.x)
-    
-class AugMelDataset(Dataset):
-    def __init__(self, x, y, sr=22050, val=False):
         self.x = x
         self.y = y
         self.sr = sr
         self.val = val
+        self.mel = mel
+        self.aug = aug
 
-        if self.val is True:
+        if self.val is True and self.mel is True:
             self.x = np.array([librosa.feature.melspectrogram(y=x, sr=self.sr, n_mels=512) for x in self.x])
 
     def __getitem__(self, index):
         x = self.x[index]
         if self.val is False:
-            x = audio_augmentation(x)
-            x = librosa.feature.melspectrogram(y=x, sr=self.sr, n_mels=512)
+            if self.aug is True:
+                x = audio_augmentation(x)
+            if self.mel is True:
+                x = librosa.feature.melspectrogram(y=x, sr=self.sr, n_mels=512)
         x = torch.tensor(x, dtype=torch.float32).to(device)
         y = torch.tensor(self.y[index], dtype=torch.long).to(device)
         return x, y
