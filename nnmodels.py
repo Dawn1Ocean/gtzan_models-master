@@ -2,12 +2,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from block import Conv, Conv2d, Bottleneck, PositionalEncoding, MLP
+from block import Conv, Conv2d, Bottleneck, PositionalEncoding, MLP, C2f, CBS2d, SPPF, C2PSA
 
 from utils import device
 
 __all__ = ['weight_init', 'Data_Model', 'Feature_Model', 'HybridAudioClassifier',
-           'TransformerEncoderDecoderClassifier', 'CNNTransformerClassifier']
+           'TransformerEncoderDecoderClassifier', 'CNNTransformerClassifier', 'Mel_Model',
+           'Mel_Attention_Model', 'YOLO11s']
 
 def weight_init(m):
     if isinstance(m, nn.LazyLinear):
@@ -453,8 +454,78 @@ class Mel_Attention_Model(nn.Module):
         x = self.act(x)
         return x
 
+class YOLO11s(nn.Module):
+    def __init__(self, num_classes:int=10, d:int=256, n=2):
+        super().__init__()
+        self.b1 = CBS2d(1, d//16, 3, 2, 1)
+        self.b2 = CBS2d(d//16, d//8, 3, 2, 1)
+        self.b3 = nn.Sequential(
+            CBS2d(d//8, d//4, 3, 2, 1),
+            C2f(d//4, d//4, shortcut=True)
+        )
+        self.b4 = nn.Sequential(
+            CBS2d(d//4, d//2, 3, 2, 1),
+            C2f(d//2, d//2, n, shortcut=True)
+        )
+        self.b5 = nn.Sequential(
+            CBS2d(d//2, d, 3, 2, 1),
+            C2f(d, d, n, shortcut=True),
+            SPPF(d, d),
+            C2PSA(d, d, 2),
+        )
+        self.fpn = nn.ModuleList([
+            C2f(d+d//2, d//2, n),
+            C2f(d//2+d//4, d//4, n),
+            CBS2d(d//4, d//4, 3, 2, 1),
+            C2f(d//2+d//4, d//2, n),
+            CBS2d(d//2, d//2, 3, 2, 1),
+            C2f(d+d//2, d, n),])
+        self.head = nn.ModuleList(
+            [nn.Sequential(
+                nn.Flatten(),
+                nn.LazyLinear(d//2),
+            ) for _ in range(3)]+
+            [MLP(3*d//2, d, num_classes)]
+        )
+        self.logits = nn.Softmax(dim=1)
+
+    def _fpn(self, b3:torch.Tensor, b4:torch.Tensor, b5:torch.Tensor)->tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        b5u = F.interpolate(b5, scale_factor=2, mode='bilinear') # d
+        p4 = torch.cat([b4, b5u], dim=1) # d+d//2
+        p4 = self.fpn[0](p4) # d//2
+        p4u = F.interpolate(p4, scale_factor=2, mode='bilinear') # d//2
+        p3 = torch.cat([b3, p4u], dim=1) # d//4 + d//2
+        p3 = self.fpn[1](p3) # d//4
+        p4n = self.fpn[2](p3) # d//4
+        p4 = torch.cat([p4, p4n], dim=1) # d//2 + d//4
+        p4 = self.fpn[3](p4) # d//2
+        p5n = self.fpn[4](p4) # d//2
+        p5 = torch.cat([b5, p5n], dim=1) # d + d//2
+        p5 = self.fpn[5](p5) # d
+        return p3, p4, p5
+
+    def _head(self, p3:torch.Tensor, p4:torch.Tensor, p5:torch.Tensor)->torch.Tensor:
+        y = torch.cat([self.head[0](p3), self.head[1](p4), self.head[2](p5)], dim=1)
+        return self.head[3](y)
+
+    def forward(self, x:torch.Tensor):
+        # print(x.shape)
+        # raise KeyboardInterrupt
+        B, H, W = x.shape
+        x = x.view(B, 1, H, W)
+        x = F.interpolate(x, (640, 640))
+        b1 = self.b1(x)
+        b2 = self.b2(b1)
+        b3 = self.b3(b2)
+        b4 = self.b4(b3)
+        b5 = self.b5(b4)
+        
+        p3, p4, p5 = self._fpn(b3, b4, b5)
+        out = self._head(p3, p4, p5)
+        return self.logits(out)
+
 if __name__ == '__main__':
     # model = CNNTransformerClassifier(1, 10).to(device)
-    model = Mel_Attention_Model(10).to(device)
+    model = YOLO11s(10).to(device)
     model.apply(weight_init)
-    model(torch.randn([12, 128, 129]).to(device))
+    model(torch.randn([128, 640, 1290]).to(device))

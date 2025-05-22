@@ -47,7 +47,7 @@ def audio_augmentation(audio):
 def mel_spectrogram(file_path, data_length, isLog=True):
     data, sr = librosa.load(file_path)
     mid_data, mid_samp = len(data) // 2, data_length // 2
-    mel = librosa.feature.melspectrogram(y=data[mid_data - mid_samp: mid_data + mid_samp], sr=sr)
+    mel = librosa.feature.melspectrogram(y=data[mid_data - mid_samp: mid_data + mid_samp], sr=sr, n_mels=640)
     if isLog:
         return librosa.amplitude_to_db(mel, ref=np.max)
     return mel
