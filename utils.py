@@ -36,8 +36,8 @@ genre_dict = {
 
 def audio_augmentation(audio):
     # 随机缩放
-    scale_factor = random.uniform(0.5, 1.5)
-    audio = audio * scale_factor
+    # scale_factor = random.uniform(0.5, 1.5)
+    # audio = audio * scale_factor
     
     # 随机高斯噪声
     noise = np.random.randn(*audio.shape) * 0.01
@@ -68,16 +68,20 @@ class GenreDataset(Dataset):
         return len(self.x)
     
 class AugMelDataset(Dataset):
-    def __init__(self, x, y, l:int, sr=22050, val=False):
+    def __init__(self, x, y, sr=22050, val=False):
         self.x = x
         self.y = y
-        self.l = l
         self.sr = sr
         self.val = val
 
+        if self.val is True:
+            self.x = np.array([librosa.feature.melspectrogram(y=x, sr=self.sr, n_mels=512) for x in self.x])
+
     def __getitem__(self, index):
-        x = audio_augmentation(self.x[index]) if self.val is False else self.x[index]
-        x = self._mel(x, self.sr, self.l)
+        x = self.x[index]
+        if self.val is False:
+            x = audio_augmentation(x)
+            x = librosa.feature.melspectrogram(y=x, sr=self.sr, n_mels=512)
         x = torch.tensor(x, dtype=torch.float32).to(device)
         y = torch.tensor(self.y[index], dtype=torch.long).to(device)
         return x, y
@@ -85,12 +89,6 @@ class AugMelDataset(Dataset):
     def __len__(self):
         return len(self.x)
     
-    @staticmethod
-    def _mel(data, sr, data_length):
-        mid_data:int = int(len(data) // 2)
-        mid_samp:int = int(data_length // 2)
-        mel = librosa.feature.melspectrogram(y=data[mid_data - mid_samp: mid_data + mid_samp], sr=sr, n_mels=512)
-        return mel
 
 def get_mel_set(data_path, data_length):
     dataset, labelset = [], []
@@ -113,17 +111,21 @@ def get_data_set(data_path, data_length):
     # dataset: the segment of music
     # labelset: convert blues/classical/country/disco/hiphop/jazz/metal/pop/reggae/rock to 0/1/2/3/4/5/6/7/8/9 in order
     for root, _, files in os.walk(data_path):
+        i=0
         for file in tqdm(files, desc=f'{os.path.basename(root).ljust(10)}'):
             genre = file.split('.')[0]
             try:
                 data, sr = librosa.load(os.path.join(root, file))
-                data = librosa.resample(data, orig_sr=sr, target_sr=sr)
+                # data = librosa.resample(data, orig_sr=sr, target_sr=sr)
                 dataset = np.vstack((dataset, data[:data_length]))
                 labelset.append(genre_dict[genre])
             except RuntimeError as e:
                 pass
             except AttributeError as e:
                 tqdm.write('There\'s something wrong in ' + file)
+            # i+=1
+            # if i > 50:
+            #     break
     return dataset[1:,:], labelset
 
 def get_feature_set(data_path):

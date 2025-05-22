@@ -10,7 +10,7 @@ from utils import device
 __all__ = ['train_epochs']
 
 # define the training function and validation function
-def train_steps(loop, model, criterion, optimizer, scaler:torch.GradScaler=None):
+def train_steps(loop, model, criterion, optimizer, scaler:torch.GradScaler|None=None):
     train_loss, train_acc = [], []
     model.train()
     for step_index, (X, y) in loop:

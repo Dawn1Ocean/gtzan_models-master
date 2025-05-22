@@ -34,7 +34,7 @@ if __name__ == '__main__':
     config = {
         'seed': 1337,       # the random seed
         'test_ratio': 0.2,  # the ratio of the test set
-        'epochs': 100,
+        'epochs': 20,
         'batch_size': 32,
         'lr': 0.00001437,    # initial learning rate
         'data_path': './Data/genres_original',
@@ -66,7 +66,7 @@ if __name__ == '__main__':
             raise NotImplementedError(f"Dataset type '{config['dataset']}' is not implemented.")
     
     if config['dataset'] == 'augMel':
-        train_dataset, test_dataset = AugMelDataset(X_train, y_train, config['data_length']), AugMelDataset(X_test, y_test, config['data_length'], val=True)
+        train_dataset, test_dataset = AugMelDataset(X_train, y_train), AugMelDataset(X_test, y_test, val=True)
     else:
         train_dataset, test_dataset = GenreDataset(X_train, y_train), GenreDataset(X_test, y_test)
 
