@@ -455,7 +455,7 @@ class Mel_Attention_Model(nn.Module):
         return x
 
 class YOLO11s(nn.Module):
-    def __init__(self, num_classes:int=10, d:int=256, n=2):
+    def __init__(self, num_classes:int=10, d:int=512, n=2):
         super().__init__()
         self.b1 = CBS2d(1, d//16, 3, 2, 1)
         self.b2 = CBS2d(d//16, d//8, 3, 2, 1)
@@ -508,7 +508,7 @@ class YOLO11s(nn.Module):
         y = torch.cat([self.head[0](p3), self.head[1](p4), self.head[2](p5)], dim=1)
         return self.head[3](y)
 
-    def forward(self, x:torch.Tensor):
+    def forward(self, x:torch.Tensor)->torch.Tensor:
         # print(x.shape)
         # raise KeyboardInterrupt
         B, H, W = x.shape
@@ -528,4 +528,4 @@ if __name__ == '__main__':
     # model = CNNTransformerClassifier(1, 10).to(device)
     model = YOLO11s(10).to(device)
     model.apply(weight_init)
-    model(torch.randn([128, 512, 1290]).to(device))
+    model(torch.randn([48, 512, 1290]).to(device))

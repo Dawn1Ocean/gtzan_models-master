@@ -19,7 +19,7 @@ from nnmodels import (
     Mel_Model, 
     Mel_Attention_Model,
     YOLO11s)
-from utils import load_data, plot_history, plot_heat_map, GenreDataset, device
+from utils import load_data, plot_history, plot_heat_map, GenreDataset, AugMelDataset, device
 from trainer import train_epochs
 
 # project root path
@@ -32,30 +32,30 @@ model_path = project_path + "genre_model.pt"
 
 if __name__ == '__main__':
     config = {
-        'seed': 42,       # the random seed
+        'seed': 1337,       # the random seed
         'test_ratio': 0.2,  # the ratio of the test set
-        'epochs': 220,
-        'batch_size': 128,
-        'lr': 0.0001437,    # initial learning rate
+        'epochs': 100,
+        'batch_size': 32,
+        'lr': 0.00001437,    # initial learning rate
         'data_path': './Data/genres_original',
         'feature_path': './Data/features_30_sec.csv',
         'isDev': True,      # True -> Train new model anyway
-        'dataset': 'mel', # 'feature' -> Trainset = features; 'original' -> Trainset = Datas; 'mel' -> Trainset = melspectrogram
+        'dataset': 'augMel', # 'feature' -> Trainset = features; 'original' -> Trainset = Datas; 'mel', 'augMel' -> Trainset = melspectrogram
         'data_length': 660000,  # If dataset != 'feature'
         'optimizer': torch.optim.AdamW,
         'scheduler': {
             'start_iters': 3,
             'start_factor': 1,
-            'end_factor': 0.25,
+            'end_factor': 0.01,
         }
     }
 
     # X_train, y_train is the training set
     # X_test, y_test is the test set
     match config['dataset']:
-        case 'original':
+        case 'original', 'augMel':
             X_train, X_test, y_train, y_test = load_data(config['test_ratio'], config['seed'], config['data_path'], config['data_length'], type='data')
-            model = CNNTransformerClassifier(1, 10).to(device)
+            model = YOLO11s(10).to(device)
         case 'feature':
             X_train, X_test, y_train, y_test = load_data(config['test_ratio'], config['seed'], config['feature_path'], type='feature')
             model = CNNTransformerClassifier(1, 10).to(device)
@@ -64,7 +64,12 @@ if __name__ == '__main__':
             model = YOLO11s(10).to(device)
         case _:
             raise NotImplementedError(f"Dataset type '{config['dataset']}' is not implemented.")
-    train_dataset, test_dataset = GenreDataset(X_train, y_train), GenreDataset(X_test, y_test)
+    
+    if config['dataset'] == 'augMel':
+        train_dataset, test_dataset = AugMelDataset(X_train, y_train, config['data_length']), AugMelDataset(X_test, y_test, config['data_length'], val=True)
+    else:
+        train_dataset, test_dataset = GenreDataset(X_train, y_train), GenreDataset(X_test, y_test)
+
     train_dataloader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=True)
     test_dataloader = DataLoader(test_dataset, batch_size=config['batch_size'], shuffle=False)
 

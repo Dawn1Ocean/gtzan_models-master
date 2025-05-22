@@ -35,8 +35,8 @@ genre_dict = {
 
 def audio_augmentation(audio):
     # 随机缩放
-    # scale_factor = 1 + torch.randn(1).item() * 0.1
-    # augmented = audio * scale_factor
+    scale_factor = 1 + torch.randn(1).item() * 0.1
+    audio = audio * scale_factor
     
     # 随机高斯噪声
     noise = np.random.randn(*audio.shape) * 0.01
@@ -66,6 +66,31 @@ class GenreDataset(Dataset):
     def __len__(self):
         return len(self.x)
     
+class AugMelDataset(Dataset):
+    def __init__(self, x, y, l:int, sr=22050, val=False):
+        self.x = x
+        self.y = y
+        self.l = l
+        self.sr = sr
+        self.val = val
+
+    def __getitem__(self, index):
+        x = audio_augmentation(self.x[index]) if self.val is False else self.x[index]
+        x = self._mel(x, self.sr, self.l)
+        x = torch.tensor(x, dtype=torch.float32).to(device)
+        y = torch.tensor(self.y[index], dtype=torch.long).to(device)
+        return x, y
+
+    def __len__(self):
+        return len(self.x)
+    
+    @staticmethod
+    def _mel(data, sr, data_length):
+        mid_data:int = int(len(data) // 2)
+        mid_samp:int = int(data_length // 2)
+        mel = librosa.feature.melspectrogram(y=data[mid_data - mid_samp: mid_data + mid_samp], sr=sr, n_mels=512)
+        return mel
+
 def get_mel_set(data_path, data_length):
     dataset, labelset = [], []
     # dataset: the melspectrogram of music
@@ -97,8 +122,8 @@ def get_data_set(data_path, data_length):
             except RuntimeError as e:
                 pass
             except AttributeError as e:
-                tqdm.write('There\'s something wrong in ' + file)        
-    return audio_augmentation(dataset[1:,:]), labelset
+                tqdm.write('There\'s something wrong in ' + file)
+    return dataset[1:,:], labelset
 
 def get_feature_set(data_path):
     # dataset: features of the segment of music
