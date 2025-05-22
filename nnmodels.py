@@ -490,10 +490,10 @@ class YOLO11s(nn.Module):
         self.logits = nn.Softmax(dim=1)
 
     def _fpn(self, b3:torch.Tensor, b4:torch.Tensor, b5:torch.Tensor)->tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        b5u = F.interpolate(b5, scale_factor=2, mode='bilinear') # d
+        b5u = F.interpolate(b5, size=b4.shape[2:], mode='bilinear') # d
         p4 = torch.cat([b4, b5u], dim=1) # d+d//2
         p4 = self.fpn[0](p4) # d//2
-        p4u = F.interpolate(p4, scale_factor=2, mode='bilinear') # d//2
+        p4u = F.interpolate(p4, size=b3.shape[2:], mode='bilinear') # d//2
         p3 = torch.cat([b3, p4u], dim=1) # d//4 + d//2
         p3 = self.fpn[1](p3) # d//4
         p4n = self.fpn[2](p3) # d//4
@@ -528,4 +528,4 @@ if __name__ == '__main__':
     # model = CNNTransformerClassifier(1, 10).to(device)
     model = YOLO11s(10).to(device)
     model.apply(weight_init)
-    model(torch.randn([128, 640, 1290]).to(device))
+    model(torch.randn([128, 512, 1290]).to(device))
