@@ -53,7 +53,7 @@ if __name__ == '__main__':
     # X_train, y_train is the training set
     # X_test, y_test is the test set
     match config['dataset']:
-        case 'original', 'augMel':
+        case 'original'|'augMel':
             X_train, X_test, y_train, y_test = load_data(config['test_ratio'], config['seed'], config['data_path'], config['data_length'], type='data')
             model = YOLO11s(10).to(device)
         case 'feature':

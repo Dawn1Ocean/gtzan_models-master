@@ -4,6 +4,7 @@ import os
 import librosa
 import numpy as np
 import matplotlib.pyplot as plt
+import random
 
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import train_test_split
@@ -35,7 +36,7 @@ genre_dict = {
 
 def audio_augmentation(audio):
     # 随机缩放
-    scale_factor = 1 + torch.randn(1).item() * 0.1
+    scale_factor = random.uniform(0.5, 1.5)
     audio = audio * scale_factor
     
     # 随机高斯噪声
