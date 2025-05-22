@@ -47,7 +47,7 @@ def audio_augmentation(audio):
 def mel_spectrogram(file_path, data_length, isLog=True):
     data, sr = librosa.load(file_path)
     mid_data, mid_samp = len(data) // 2, data_length // 2
-    mel = librosa.feature.melspectrogram(y=data[mid_data - mid_samp: mid_data + mid_samp], sr=sr, n_mels=640)
+    mel = librosa.feature.melspectrogram(y=data[mid_data - mid_samp: mid_data + mid_samp], sr=sr, n_mels=512)
     if isLog:
         return librosa.amplitude_to_db(mel, ref=np.max)
     return mel
@@ -114,7 +114,7 @@ def get_feature_set(data_path):
     return dataset, labelset
 
 # load dataset and preprocess
-def load_data(ratio, random_seed, data_path, data_length, type='feature'):
+def load_data(ratio, random_seed, data_path, data_length=None, type='feature'):
     match type:
         case 'feature':
             dataset, labelset = get_feature_set(data_path)
@@ -122,6 +122,8 @@ def load_data(ratio, random_seed, data_path, data_length, type='feature'):
             dataset, labelset = get_data_set(data_path, data_length)
         case 'mel':
             dataset, labelset = get_mel_set(data_path, data_length)
+        case _:
+            raise NotImplementedError(f"Unknown type: {type}")
     # reshape the data and split the dataset
     dataset = np.array(dataset)
     labelset = np.array(labelset).reshape(-1)

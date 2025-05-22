@@ -62,6 +62,8 @@ if __name__ == '__main__':
         case 'mel':
             X_train, X_test, y_train, y_test = load_data(config['test_ratio'], config['seed'], config['data_path'], config['data_length'], type='mel')
             model = YOLO11s(10).to(device)
+        case _:
+            raise NotImplementedError(f"Dataset type '{config['dataset']}' is not implemented.")
     train_dataset, test_dataset = GenreDataset(X_train, y_train), GenreDataset(X_test, y_test)
     train_dataloader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=True)
     test_dataloader = DataLoader(test_dataset, batch_size=config['batch_size'], shuffle=False)

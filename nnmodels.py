@@ -513,7 +513,7 @@ class YOLO11s(nn.Module):
         # raise KeyboardInterrupt
         B, H, W = x.shape
         x = x.view(B, 1, H, W)
-        x = F.interpolate(x, (640, 640))
+        # x = F.interpolate(x, (640, 640))
         b1 = self.b1(x)
         b2 = self.b2(b1)
         b3 = self.b3(b2)
