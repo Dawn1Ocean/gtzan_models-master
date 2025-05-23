@@ -14,8 +14,8 @@ from nnmodels import (
     Mel_Model,
     Mel_Attention_Model,
     YOLO11s)
-from utils import load_data, GenreDataset, device
-from trainer import training, testing
+from utils import load_data, GenreDataset, device, getKfoldDataloader
+from trainer import training, testing, kFoldVal
 
 # project root path
 project_path = "."
@@ -24,22 +24,22 @@ if __name__ == '__main__':
     config = {
         'log_dir': os.path.join(project_path, "logs", datetime.datetime.now().strftime("%Y%m%d-%H%M%S")),
         'model_path': os.path.join(project_path, "result", "genre_model.pt"),
-        'model': "Mel_Attention_Model",
+        'model': "YOLO11s",
         'args': (10,),
         'seed': 1337,       # the random seed
         'test_ratio': 0.2,  # the ratio of the test set
-        'epochs': 100,
+        'epochs': 1,
         'batch_size': 32,
-        'lr': 0.0001437,    # initial learning rate
+        'lr': 0.00001437,    # initial learning rate
         'data_path': './Data/genres_original',
         'feature_path': './Data/features_30_sec.csv',
         'isDev': True,      # True -> Train new model anyway
         'dataset': {
             'type': 'data',  # 'feature' -> Trainset = features; 'data' -> Trainset = Datas
             'Mel': True,
-            'Aug': False,
+            'Aug': True,
         },
-        'data_length': 660000,  # If dataset != 'feature'
+        'data_length': 160000,  # If dataset != 'feature'
         'optimizer': torch.optim.AdamW,
         'scheduler': {
             'start_iters': 3,
@@ -47,31 +47,37 @@ if __name__ == '__main__':
             'end_factor': 0.01,
         },
         'show': False, # plotting
-        'fold': False,
+        'fold': 5,
     }
 
-    model = globals()[config['model']](*config['args'])
+    if config['fold'] is not False:
+        config['test_ratio'] = 0.0
 
     # X_train, y_train is the training set
     # X_test, y_test is the test set
     X_train, X_test, y_train, y_test = load_data(config['test_ratio'], config['seed'], config['data_path'], config['data_length'], type=config['dataset']['type'])
     
-    train_dataset = GenreDataset(X_train, y_train, mel=config['dataset']['Mel'], aug=config['dataset']['Aug'])
-    test_dataset = GenreDataset(X_test, y_test, val=True, mel=config['dataset']['Mel'])
-
-    train_dataloader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=True)
-    test_dataloader = DataLoader(test_dataset, batch_size=config['batch_size'], shuffle=False)
-
-    dataloaders = (train_dataloader, test_dataloader)
-
-    model = globals()[config['model']](*config['args']).to(device)
-    model.apply(weight_init)
-    if os.path.exists(config['model_path']) and not config['isDev']:
-        # import the pre-trained model if it exists
-        print('Import the pre-trained model, skip the training process')
-        model.load_state_dict(torch.load(config['model_path']))
-        model.eval()
+    if config['fold'] is not False:
+        if config['fold'] is True:
+            config['fold'] = 5
+        acc = kFoldVal([globals()[config['model']](*config['args']).to(device) for _ in range(config['fold'])], config, getKfoldDataloader(X_train, y_train, config, k=config['fold']))
+        print(f'{config['fold']}-Fold Validation Accuracy: {acc}')
     else:
-        training(model, config, dataloaders)
-    testing(model, config, test_dataloader)
+        model = globals()[config['model']](*config['args']).to(device)
+        train_dataset = GenreDataset(X_train, y_train, mel=config['dataset']['Mel'], aug=config['dataset']['Aug'])
+        test_dataset = GenreDataset(X_test, y_test, val=True, mel=config['dataset']['Mel'])
+
+        train_dataloader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=True)
+        test_dataloader = DataLoader(test_dataset, batch_size=config['batch_size'], shuffle=False)
+
+        dataloaders = (train_dataloader, test_dataloader)
+        model.apply(weight_init)
+        if os.path.exists(config['model_path']) and not config['isDev']:
+            # import the pre-trained model if it exists
+            print('Import the pre-trained model, skip the training process')
+            model.load_state_dict(torch.load(config['model_path']))
+            model.eval()
+        else:
+            training(model, config, dataloaders)
+        testing(model, config, test_dataloader)
     

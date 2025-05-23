@@ -2,15 +2,14 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-from torchinfo import summary
 from torch.utils.tensorboard import SummaryWriter
+from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import LinearLR, ChainedScheduler
 from sklearn.metrics import accuracy_score
 from tqdm import tqdm
 from utils import device
 from plot import plot_history, plot_heat_map
-
-from torch.utils.data import DataLoader
+from nnmodels import weight_init
 
 __all__ = ('training', 'testing')
 
@@ -132,14 +131,14 @@ def testing(model, config, test_dataloader)->dict:
     plot_heat_map(result['y_truth'], result['y_pred'], config['show'])
     return {'loss':result['loss'], 'acc':result['acc']}
 
-def kFoldVal(model:nn.Module, config, dataloaders:list[tuple[DataLoader, DataLoader]])->float:
+def kFoldVal(models:list[nn.Module], config, dataloaders:list[tuple[DataLoader, DataLoader]])->float:
     assert len(dataloaders) == config['fold'], "The number of dataloaders must be equal to the number of folds"
 
     acc = []
-    for train_dataloader, test_dataloader in dataloaders:
-        m = model
-        training(m, config, (train_dataloader, test_dataloader))
-        result = testing(m, config, test_dataloader)
-        acc.extend(result['acc'])
+    for (train_dataloader, test_dataloader), model in zip(dataloaders, models):
+        model.apply(weight_init).to(device)
+        training(model, config, (train_dataloader, test_dataloader))
+        result = testing(model, config, test_dataloader)
+        acc.append(result['acc'])
     
     return float(np.mean(acc))

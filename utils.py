@@ -3,8 +3,8 @@ import os
 import librosa
 import numpy as np
 
-from sklearn.model_selection import train_test_split
-from torch.utils.data import Dataset
+from sklearn.model_selection import train_test_split, KFold
+from torch.utils.data import Dataset, DataLoader
 from tqdm import tqdm
 
 __all__ = ('device', 'GenreDataset', 'get_data_set', 'get_feature_set', 'load_data')
@@ -114,5 +114,29 @@ def load_data(ratio, random_seed, data_path, data_length=None, type='feature'):
     # reshape the data and split the dataset
     dataset = np.array(dataset)
     labelset = np.array(labelset).reshape(-1)
-    X_train, X_test, y_train, y_test = train_test_split(dataset, labelset, test_size=ratio, random_state=random_seed)
-    return X_train, X_test, y_train, y_test
+    if ratio >= 0.01:
+        X_train, X_test, y_train, y_test = train_test_split(dataset, labelset, test_size=ratio, random_state=random_seed)
+        return X_train, X_test, y_train, y_test
+    return dataset, [], labelset, []
+
+def getKfoldDataloader(datas:np.ndarray, labels:np.ndarray, config:dict, k:int=5)->list[tuple[DataLoader, DataLoader]]:
+    kfold = KFold(n_splits=k, shuffle=True)
+
+    dataloaders = []
+    for train_index, test_index in tqdm(kfold.split(datas), desc=f'{k}-fold dataloader'):
+        dataloaders.append((DataLoader(GenreDataset(
+                x=datas[train_index],
+                y=labels[train_index],
+                mel=config['dataset']['Mel'],
+                aug=config['dataset']['Aug'],
+            ),
+            batch_size=config['batch_size'], shuffle=True),
+            DataLoader(GenreDataset(
+                x=datas[test_index],
+                y=labels[test_index],
+                mel=config['dataset']['Mel'],
+                aug=config['dataset']['Aug'],
+            ),
+            batch_size=config['batch_size'], shuffle=False)))
+        
+    return dataloaders
