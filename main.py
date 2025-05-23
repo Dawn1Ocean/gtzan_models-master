@@ -3,6 +3,7 @@ import torch
 import os
 
 from torch.utils.data import DataLoader
+from torchinfo import summary
 
 from nnmodels import (
     weight_init,
@@ -37,9 +38,9 @@ if __name__ == '__main__':
             'feature_path': './Data/features_30_sec.csv',
             'type': 'data',  # 'feature' -> Trainset = features; 'data' -> Trainset = Datas
             'Mel': True,     # Using Mel Spectrogram or not
-            'Aug': True,     # Adding random noise before every epoch (May slow down the training) or not
+            'Aug': False,     # Adding random noise before every epoch (May slow down the training) or not
             'data_length': 660000,  # If dataset != 'feature',
-            'n_mels': 512,
+            'n_mels': 128,
         },
         'optimizer': torch.optim.AdamW,
         'scheduler': {
@@ -49,6 +50,7 @@ if __name__ == '__main__':
         },
         'show': False,       # plotting
         'fold': 0,           # 0 -> not k-fold; k>0 -> k-fold
+        'summary': False,    # Show summary
     }
 
     dataset_config = config['dataset']
@@ -65,6 +67,7 @@ if __name__ == '__main__':
         print(f'{config['fold']}-Fold Validation Accuracy: {acc}')
     else:
         model = config['model'](*config['args']).to(device)
+
         train_dataset = GenreDataset(X_train, y_train, mel=dataset_config['Mel'], aug=dataset_config['Aug'], n_mels=dataset_config['n_mels'])
         test_dataset = GenreDataset(X_test, y_test, val=True, mel=dataset_config['Mel'], n_mels=dataset_config['n_mels'])
 
@@ -80,4 +83,6 @@ if __name__ == '__main__':
             model.eval()
         else:
             training(model, config, dataloaders)
+            if config['summary']:
+                summary(model, (config['batch_size'], *X_train.shape[1:]), col_names=["input_size", "kernel_size", "output_size"], verbose=2)
         testing(model, config, test_dataloader)

@@ -112,9 +112,6 @@ def training(model, config, dataloaders):
                 total_iters=config['epochs'])]
         , optimizer=optimizer)
 
-    # print the model structure if there is not any lazy layers in Net
-    # summary(model, (config['batch_size'], X_train.shape[1]), col_names=["input_size", "kernel_size", "output_size"], verbose=2)
-
     # define the Tensorboard SummaryWriter
     writer = SummaryWriter(log_dir=config['log_dir'])
     # train and evaluate model

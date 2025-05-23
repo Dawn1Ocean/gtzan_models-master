@@ -54,9 +54,10 @@ class GenreDataset(Dataset):
 
     def __getitem__(self, index):
         x = self.x[index]
-        if self.val is False and self.aug is True:
-            x = audio_augmentation(x)
-            if self.mel is True:
+        if self.aug:
+            if not self.val:
+                x = audio_augmentation(x)
+            if self.mel:
                 x = self._mel(x)
         x = torch.tensor(x, dtype=torch.float32).to(device)
         y = torch.tensor(self.y[index], dtype=torch.long).to(device)
