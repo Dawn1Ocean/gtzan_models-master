@@ -1,17 +1,13 @@
-import seaborn
 import torch
 import os
 import librosa
 import numpy as np
-import matplotlib.pyplot as plt
-import random
 
-from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-__all__ = ['device', 'GenreDataset', 'get_data_set', 'get_feature_set', 'load_data', 'plot_heat_map', 'plot_history']
+__all__ = ('device', 'GenreDataset', 'get_data_set', 'get_feature_set', 'load_data')
 
 # the device to use
 device = torch.device("cpu")
@@ -36,7 +32,7 @@ genre_dict = {
 
 def audio_augmentation(audio):
     # 随机缩放
-    # scale_factor = random.uniform(0.5, 1.5)
+    # scale_factor = np.random.rand(0.5, 1.5)
     # audio = audio * scale_factor
     
     # 随机高斯噪声
@@ -148,55 +144,3 @@ def load_data(ratio, random_seed, data_path, data_length=None, type='feature'):
     labelset = np.array(labelset).reshape(-1)
     X_train, X_test, y_train, y_test = train_test_split(dataset, labelset, test_size=ratio, random_state=random_seed)
     return X_train, X_test, y_train, y_test
-
-# confusion matrix
-def plot_heat_map(y_test, y_pred, show=False):
-    con_mat = confusion_matrix(y_test, y_pred)
-    # normalize
-    # con_mat_norm = con_mat.astype('float') / con_mat.sum(axis=1)[:, np.newaxis]
-    # con_mat_norm = np.around(con_mat_norm, decimals=2)
-
-    # plot
-    plt.figure(figsize=(8, 8))
-    seaborn.heatmap(con_mat, annot=True, fmt='.20g', cmap='Blues')
-    # plt.xlim(0, con_mat.shape[1])
-    # plt.ylim(0, con_mat.shape[0])
-    plt.xlabel('Predicted labels')
-    plt.ylabel('True labels')
-    plt.title('Confusion Matrix')
-    plt.savefig('confusion_matrix.png')
-    if show:
-        plt.show()
-
-def plot_history(history, show=False):
-    plt.figure(figsize=(8, 8))
-    plt.plot(history['train_acc'])
-    plt.plot(history['test_acc'])
-    plt.title('Model Accuracy')
-    plt.ylabel('Accuracy')
-    plt.xlabel('Epoch')
-    plt.legend(['Train', 'Test'], loc='upper left')
-    plt.savefig('accuracy.png')
-    if show:
-        plt.show()
-
-    plt.figure(figsize=(8, 8))
-    plt.plot(history['train_loss'])
-    plt.plot(history['test_loss'])
-    plt.title('Model Loss')
-    plt.ylabel('Loss')
-    plt.xlabel('Epoch')
-    plt.legend(['Train', 'Test'], loc='upper left')
-    plt.savefig('loss.png')
-    if show:
-        plt.show()
-
-    plt.figure(figsize=(8, 8))
-    plt.plot(history['train_lr'])
-    plt.title('Learning Rate')
-    plt.ylabel('lr')
-    plt.xlabel('Epoch')
-    # plt.legend(['Train', 'Test'], loc='upper left')
-    plt.savefig('lr.png')
-    if show:
-        plt.show()

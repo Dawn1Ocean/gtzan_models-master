@@ -3,7 +3,7 @@ name = "gtzan-models-master"
 version = "0.1.0"
 description = "gtzan-models"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
     "librosa",
     "matplotlib",

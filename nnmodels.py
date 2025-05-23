@@ -6,9 +6,9 @@ from block import Conv, Conv2d, Bottleneck, PositionalEncoding, MLP, C2f, CBS2d,
 
 from utils import device
 
-__all__ = ['weight_init', 'Data_Model', 'Feature_Model', 'HybridAudioClassifier',
+__all__ = ('weight_init', 'Data_Model', 'Feature_Model', 'HybridAudioClassifier',
            'TransformerEncoderDecoderClassifier', 'CNNTransformerClassifier', 'Mel_Model',
-           'Mel_Attention_Model', 'YOLO11s']
+           'Mel_Attention_Model', 'YOLO11s')
 
 def weight_init(m):
     if isinstance(m, nn.LazyLinear):
@@ -40,12 +40,9 @@ class Data_Model(nn.Module):
         self.fc1 = nn.Sequential(nn.LazyLinear(8*c), 
                                  nn.BatchNorm1d(8*c), 
                                  nn.SiLU())
-        # self.dropout1 = nn.Dropout(0.2)
         self.fc2 = nn.Sequential(nn.Linear(8*c, 4*c), 
                                  nn.BatchNorm1d(4*c), 
                                  nn.SiLU())
-        # self.dropout2 = nn.Dropout(0.2)
-        # self.ssm = nn.LSTM(int(2*c), int(8*c), int(4*c), bias=False, dropout=0.2, bidirectional=True)
         self.fc3 = nn.Linear(4*c, label_d)
         self.act = nn.Softmax(dim=1)
 
@@ -61,16 +58,8 @@ class Data_Model(nn.Module):
         x = self.conv4(x)
 
         x = self.flatten(x)
-        # x = x.view(256, 32, -1)
-        
-        # lstm_out, _ = self.lstm(x)  # lstm_out: (batch_size, seq_len, 100)
-        
-        # lstm_out = lstm_out[:, -1, :]  # 取最后一个时间步的输出
         x = self.fc1(x)
-        # x = self.dropout1(x)
         x = self.fc2(x)
-        # x = self.dropout2(x)
-        # x, _ = self.ssm(x)
         x = self.act(self.fc3(x))
         return x
     
