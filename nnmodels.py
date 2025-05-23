@@ -6,9 +6,9 @@ from block import Conv, Conv2d, Bottleneck, PositionalEncoding, MLP, C2f, CBS2d,
 
 from utils import device
 
-__all__ = ('weight_init', 'Data_Model', 'Feature_Model', 'HybridAudioClassifier',
-           'TransformerEncoderDecoderClassifier', 'CNNTransformerClassifier', 'Mel_Model',
-           'Mel_Attention_Model', 'YOLO11s')
+__all__ = ('weight_init', 'CNN_1D_Model', 'MLP_Model', 'CNN_1D_BiLSTM_Attention_Model',
+           'Transformer_Encoder_Decoder_Model', 'CNN_1D_Transformer_Model', 'CNN_2D_Model',
+           'CNN_2D_Attention_Model', 'YOLO11s')
 
 def weight_init(m):
     if isinstance(m, nn.LazyLinear):
@@ -23,26 +23,21 @@ def weight_init(m):
         nn.init.constant_(m.bias, 0)
 
 # build the CNN model
-class Data_Model(nn.Module):
+class CNN_1D_Model(nn.Module):
     def __init__(self, label_d, c=16, k=3, kb=5):
         super().__init__()
-        self.conv1 = Conv(1, c, 11, 4, 1)
-        self.conv2 = nn.Sequential(Conv(c, 4*c, k, 4, 1), 
-                                   Bottleneck(4*c, 4*c, kb, shortcut=True))
-        self.conv3 = nn.Sequential(Conv(4*c, 8*c, k, 2, 1), 
-                                   Bottleneck(8*c, 8*c, kb, shortcut=True))
-        self.conv4 = nn.Sequential(Conv(8*c, 8*c, k), 
-                                   Bottleneck(8*c, 8*c, kb, shortcut=True))
-        
-        self.flatten = nn.Flatten()
+        self.conv = nn.Sequential(
+            Conv(1, c, 11, 4, 1),
+            Conv(c, 4*c, k, 4, 1), 
+            Bottleneck(4*c, 4*c, kb, shortcut=True),
+            Conv(4*c, 8*c, k, 2, 1), 
+            Bottleneck(8*c, 8*c, kb, shortcut=True),
+            Conv(8*c, 8*c, k), 
+            Bottleneck(8*c, 8*c, kb, shortcut=True),
+        )
 
-        self.fc1 = nn.Sequential(nn.LazyLinear(8*c), 
-                                 nn.BatchNorm1d(8*c), 
-                                 nn.SiLU())
-        self.fc2 = nn.Sequential(nn.Linear(8*c, 4*c), 
-                                 nn.BatchNorm1d(4*c), 
-                                 nn.SiLU())
-        self.fc3 = nn.Linear(4*c, label_d)
+        self.flatten = nn.Flatten()
+        self.fc = MLP(hidden_dim=8*c, output_dim=label_d, dropout=0.3)
         self.act = nn.Softmax(dim=1)
 
     def forward(self, x:torch.Tensor):
@@ -51,72 +46,43 @@ class Data_Model(nn.Module):
         B, L = x.shape
         x = x.view(B, 1, L)
 
-        x = self.conv1(x)
-        x = self.conv2(x)
-        x = self.conv3(x)
-        x = self.conv4(x)
-
+        x = self.conv(x)
         x = self.flatten(x)
-        x = self.fc1(x)
-        x = self.fc2(x)
-        x = self.act(self.fc3(x))
+        x = self.fc(x)
+        x = self.act(x)
         return x
     
 # build the ANN model
-class Feature_Model(nn.Module):
+class MLP_Model(nn.Module):
     def __init__(self, input_d, label_d):
         super().__init__()
-        self.fc1 = nn.Linear(input_d, 1024)
-        self.bn1 = nn.BatchNorm1d(1024)
-        self.fc2 = nn.Linear(1024, 512)
-        self.bn2 = nn.BatchNorm1d(512)
-        self.fc3 = nn.Linear(512, 256)
-        self.bn3 = nn.BatchNorm1d(256)
-        self.fc4 = nn.Linear(256, 128)
-        self.bn4 = nn.BatchNorm1d(128)
-        self.fc5 = nn.Linear(128, 32)
-        self.bn5 = nn.BatchNorm1d(32)
-        self.fc6 = nn.Linear(32, label_d)
+        self.mlp1 = MLP(input_dim=input_d, hidden_dim=1024, output_dim=256, dropout=0.3)
+        self.act1 = nn.SiLU()
+        self.mlp2 = MLP(input_dim=256, hidden_dim=128, output_dim=64, dropout=0.3)
+        self.act2 = nn.SiLU()
+        self.mlp3 = MLP(input_dim=64, hidden_dim=32, output_dim=label_d, dropout=0.3)
+        self.act3 = nn.Softmax(dim=1)
 
     def forward(self, x):
         # x.shape = (batch_size, input_d)
-        x = F.silu(self.fc1(x))
-        x = self.bn1(x)
-        x = F.silu(self.fc2(x))
-        x = self.bn2(x)
-        x = F.silu(self.fc3(x))
-        x = self.bn3(x)
-        x = F.silu(self.fc4(x))
-        x = self.bn4(x)
-        x = F.silu(self.fc5(x))
-        x = self.bn5(x)
-        x = F.softmax(self.fc6(x), dim=1)
+        x = self.act1(self.mlp1(x))
+        x = self.act2(self.mlp2(x))
+        x = self.act3(self.mlp3(x))
         return x
     
-class HybridAudioClassifier(nn.Module):
+class CNN_1D_BiLSTM_Attention_Model(nn.Module):
     def __init__(self, num_classes=10):
-        super(HybridAudioClassifier, self).__init__()
+        super().__init__()
         
         # 1D CNN特征提取分支
         self.cnn_branch = nn.Sequential(
-            nn.Conv1d(1, 16, kernel_size=80, stride=4, padding=40),
-            nn.BatchNorm1d(16),
-            nn.SiLU(),
+            Conv(1, 16, kernel=80, stride=4, p=40),
             nn.MaxPool1d(4),
-
-            nn.Conv1d(16, 64, kernel_size=80, stride=4, padding=40),
-            nn.BatchNorm1d(64),
-            nn.SiLU(),
+            Conv(16, 64, kernel=80, stride=4, p=40),
             nn.MaxPool1d(4),
-            
-            nn.Conv1d(64, 128, kernel_size=80, stride=4, padding=40),
-            nn.BatchNorm1d(128),
-            nn.SiLU(),
+            Conv(64, 128, kernel=80, stride=4, p=40),
             nn.MaxPool1d(4),
-            
-            nn.Conv1d(128, 256, kernel_size=80, stride=4, padding=40),
-            nn.BatchNorm1d(256),
-            nn.SiLU()
+            Conv(128, 256, kernel=80, stride=4, p=40),
         )
         
         # BiLSTM分支
@@ -139,15 +105,8 @@ class HybridAudioClassifier(nn.Module):
         
         # 分类器
         self.classifier = nn.Sequential(
-            nn.LazyLinear(512),  # BiLSTM 输出是双向的
-            nn.BatchNorm1d(512),
-            nn.SiLU(),
-            nn.Dropout(0.5),
-            nn.Linear(512, 128),
-            nn.BatchNorm1d(128),
-            nn.SiLU(),
-            nn.Dropout(0.3),
-            nn.Linear(128, num_classes),
+            MLP(hidden_dim=512, output_dim=128, dropout=0.3),
+            MLP(input_dim=128, hidden_dim=64, output_dim=num_classes, dropout=0.3),
             nn.Softmax(dim=1)
         )
     
@@ -178,13 +137,13 @@ class HybridAudioClassifier(nn.Module):
         
         return output
 
-class TransformerEncoderDecoderClassifier(nn.Module):
+class Transformer_Encoder_Decoder_Model(nn.Module):
     """使用编码器-解码器结构的Transformer用于序列分类，支持长序列"""
     def __init__(self, input_dim, num_classes=10, d_model=64, nhead=4, 
                  num_encoder_layers=3, num_decoder_layers=3, 
                  dim_feedforward=256, dropout=0.1, max_seq_length=32,
                  use_segment_pooling=True, segment_length=2048):
-        super(TransformerEncoderDecoderClassifier, self).__init__()
+        super().__init__()
         
         self.d_model = d_model
         self.max_seq_length = max_seq_length
@@ -339,13 +298,13 @@ class TransformerEncoderDecoderClassifier(nn.Module):
         return self.act(logits)
 
 
-class CNNTransformerClassifier(TransformerEncoderDecoderClassifier):
+class CNN_1D_Transformer_Model(Transformer_Encoder_Decoder_Model):
     """结合CNN和Transformer的分类器"""
     def __init__(self, input_dim, num_classes=10, d_model=128, nhead=8, 
                  num_encoder_layers=3, num_decoder_layers=3, 
                  dim_feedforward=512, dropout=0.2, max_seq_length=128,
                  use_segment_pooling=True, segment_length=2048):
-        super(CNNTransformerClassifier, self).__init__(
+        super().__init__(
             input_dim=input_dim,
             num_classes=num_classes,
             d_model=d_model,
@@ -373,7 +332,7 @@ class CNNTransformerClassifier(TransformerEncoderDecoderClassifier):
         return src
 
 # build the 2D-CNN model
-class Mel_Model(nn.Module):
+class CNN_2D_Model(nn.Module):
     def __init__(self, label_d, c=16, k=3, s=1):
         super().__init__()
         self.conv = nn.Sequential(
@@ -386,7 +345,7 @@ class Mel_Model(nn.Module):
         self.fc = nn.Sequential(nn.LazyLinear(32*c),
                                  nn.SiLU(),
                                  nn.BatchNorm1d(32*c),)
-        self.mlp = MLP(32*c, 16*c, label_d, dropout=0.75)
+        self.mlp = MLP(input_dim=32*c, hidden_dim=16*c, output_dim=label_d, dropout=0.75)
         self.act = nn.Softmax(dim=1)
 
     def forward(self, x):
@@ -400,7 +359,7 @@ class Mel_Model(nn.Module):
         x = self.act(x)
         return x
     
-class Mel_Attention_Model(nn.Module):
+class CNN_2D_Attention_Model(nn.Module):
     def __init__(self, label_d, c=16, k=3, s=1):
         super().__init__()
         self.conv = nn.Sequential(
@@ -423,7 +382,7 @@ class Mel_Attention_Model(nn.Module):
         self.fc = nn.Sequential(nn.LazyLinear(32*c),
                                  nn.SiLU(),
                                  nn.BatchNorm1d(32*c),)
-        self.mlp = MLP(32*c, 16*c, label_d, dropout=0.6)
+        self.mlp = MLP(input_dim=32*c, hidden_dim=16*c, output_dim=label_d, dropout=0.6)
         self.act = nn.Softmax(dim=1)
 
     def forward(self, x):
@@ -473,7 +432,7 @@ class YOLO11s(nn.Module):
                 nn.Flatten(),
                 nn.LazyLinear(d//2),
             ) for _ in range(3)]+
-            [MLP(3*d//2, d, num_classes)]
+            [MLP(input_dim=3*d//2, hidden_dim=d, output_dim=num_classes)]
         )
         self.logits = nn.Softmax(dim=1)
 
