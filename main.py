@@ -47,6 +47,7 @@ if __name__ == '__main__':
             'end_factor': 0.01,
         },
         'show': False, # plotting
+        'fold': False,
     }
 
     model = globals()[config['model']](*config['args'])

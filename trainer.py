@@ -10,6 +10,8 @@ from tqdm import tqdm
 from utils import device
 from plot import plot_history, plot_heat_map
 
+from torch.utils.data import DataLoader
+
 __all__ = ('training', 'testing')
 
 # define the training function and validation function
@@ -45,6 +47,7 @@ def train_steps(loop, model, criterion, optimizer, scaler:torch.GradScaler|None=
 
 def test_steps(loop, model, criterion):
     test_loss, test_acc = [], []
+    y_pred, y_truth = [], []
     model.eval()
     with torch.no_grad():
         for step_index, (X, y) in loop:
@@ -55,13 +58,15 @@ def test_steps(loop, model, criterion):
             test_loss.append(loss)
             pred_result = torch.argmax(pred, dim=1).detach().cpu().numpy()
             y = y.detach().cpu().numpy()
+            y_pred.extend(pred_result)
+            y_truth.extend(y)
             acc = accuracy_score(y, pred_result)
             test_acc.append(acc)
             loop.set_postfix(loss=loss, acc=acc)
-    return {"loss": np.mean(test_loss), "acc": np.mean(test_acc)}
+    return {"loss": np.mean(test_loss), "acc": np.mean(test_acc), "y_pred":y_pred, "y_truth":y_truth}
 
 
-def train_epochs(train_dataloader, test_dataloader, model, criterion, optimizer, config, writer, scheduler, scaler=None):
+def train_epochs(train_dataloader, test_dataloader, model, criterion, optimizer, config, writer, scheduler, scaler=None)->dict:
     epochs = config['epochs']
     train_loss_ls, train_loss_acc, test_loss_ls, test_loss_acc, train_lr= [], [], [], [], []
     for epoch in range(epochs):
@@ -121,16 +126,20 @@ def training(model, config, dataloaders):
     # plot the training history
     plot_history(history, config['show'])
 
-def testing(model, config, test_dataloader):
+def testing(model, config, test_dataloader)->dict:
     # predict the class of test data
-    y_pred, y_truth = [], []
-    model.eval()
-    with torch.no_grad():
-        for step_index, (X, y) in enumerate(test_dataloader):
-            X, y = X.to(device), y.to(device)
-            pred = model(X)
-            pred_result = torch.argmax(pred, dim=1).detach().cpu().numpy()
-            y_pred.extend(pred_result)
-            y_truth.extend(y.detach().cpu().numpy())
-    # plot confusion matrix heat map
-    plot_heat_map(y_truth, y_pred, config['show'])
+    result = test_steps(tqdm(test_dataloader), model, nn.CrossEntropyLoss(label_smoothing=0.1))
+    plot_heat_map(result['y_truth'], result['y_pred'], config['show'])
+    return {'loss':result['loss'], 'acc':result['acc']}
+
+def kFoldVal(model:nn.Module, config, dataloaders:list[tuple[DataLoader, DataLoader]])->float:
+    assert len(dataloaders) == config['fold'], "The number of dataloaders must be equal to the number of folds"
+
+    acc = []
+    for train_dataloader, test_dataloader in dataloaders:
+        m = model
+        training(m, config, (train_dataloader, test_dataloader))
+        result = testing(m, config, test_dataloader)
+        acc.extend(result['acc'])
+    
+    return float(np.mean(acc))
