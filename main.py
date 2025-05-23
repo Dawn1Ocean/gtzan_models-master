@@ -24,8 +24,8 @@ project_path = "."
 if __name__ == '__main__':
     config = {
         'log_dir': os.path.join(project_path, "logs", datetime.datetime.now().strftime("%Y%m%d-%H%M%S")),
-        'model_path': os.path.join(project_path, "result", "genre_model.pt"),
-        'model': CNN_2D_Attention_Model,
+        'result_path': os.path.join(project_path, "result"),
+        'model': 'CNN_2D_Attention_Model',
         'args': (10,),
         'seed': 1337,        # the random seed
         'test_ratio': 0.2,   # the ratio of the test set
@@ -53,6 +53,9 @@ if __name__ == '__main__':
         'summary': False,    # Show summary
     }
 
+    if not os.path.exists(config['result_path']):
+        os.makedirs(config['result_path'])
+    model_path = os.path.join(project_path, "result", config['model'] + ".pt")
     dataset_config = config['dataset']
 
     if config['fold']:
@@ -63,10 +66,10 @@ if __name__ == '__main__':
     X_train, X_test, y_train, y_test = load_data(config['test_ratio'], config['seed'], dataset_config) # type: ignore
     
     if config['fold']:
-        acc = kFoldVal([config['model'](*config['args']).to(device) for _ in range(config['fold'])], config, getKfoldDataloader(X_train, y_train, config, k=config['fold']))
+        acc = kFoldVal([globals()[config['model']](*config['args']).to(device) for _ in range(config['fold'])], config, getKfoldDataloader(X_train, y_train, config, k=config['fold']))
         print(f'{config['fold']}-Fold Validation Accuracy: {acc}')
     else:
-        model = config['model'](*config['args']).to(device)
+        model = globals()[config['model']](*config['args']).to(device)
 
         train_dataset = GenreDataset(X_train, y_train, mel=dataset_config['Mel'], aug=dataset_config['Aug'], n_mels=dataset_config['n_mels'])
         test_dataset = GenreDataset(X_test, y_test, val=True, mel=dataset_config['Mel'], n_mels=dataset_config['n_mels'])
@@ -76,13 +79,13 @@ if __name__ == '__main__':
 
         dataloaders = (train_dataloader, test_dataloader)
         model.apply(weight_init)
-        if os.path.exists(config['model_path']) and not config['isDev']:
+        if os.path.exists(model_path) and not config['isDev']:
             # import the pre-trained model if it exists
             print('Import the pre-trained model, skip the training process')
-            model.load_state_dict(torch.load(config['model_path']))
+            model.load_state_dict(torch.load(model_path))
             model.eval()
         else:
-            training(model, config, dataloaders)
+            training(model, config, dataloaders, model_path, config['model'], config['result_path'])
             if config['summary']:
                 summary(model, (config['batch_size'], *X_train.shape[1:]), col_names=["input_size", "kernel_size", "output_size"], verbose=2)
-        testing(model, config, test_dataloader)
+        testing(model, config, test_dataloader, config['model'], config['result_path'])

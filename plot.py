@@ -1,11 +1,12 @@
 import seaborn
+import os
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 
 __all__ = ('plot_heat_map', 'plot_history')
 
 # confusion matrix
-def plot_heat_map(y_test, y_pred, show=False):
+def plot_heat_map(y_test, y_pred, path, model_name, show=False):
     con_mat = confusion_matrix(y_test, y_pred)
     # normalize
     # con_mat_norm = con_mat.astype('float') / con_mat.sum(axis=1)[:, np.newaxis]
@@ -19,11 +20,11 @@ def plot_heat_map(y_test, y_pred, show=False):
     plt.xlabel('Predicted labels')
     plt.ylabel('True labels')
     plt.title('Confusion Matrix')
-    plt.savefig('confusion_matrix.png')
+    plt.savefig(os.path.join(path, model_name + '_confusion_matrix.png'))
     if show:
         plt.show()
 
-def plot_history(history, show=False):
+def plot_history(history, path, model_name, show=False):
     plt.figure(figsize=(8, 8))
     plt.plot(history['train_acc'])
     plt.plot(history['test_acc'])
@@ -31,7 +32,7 @@ def plot_history(history, show=False):
     plt.ylabel('Accuracy')
     plt.xlabel('Epoch')
     plt.legend(['Train', 'Test'], loc='upper left')
-    plt.savefig('accuracy.png')
+    plt.savefig(os.path.join(path, model_name + '_accuracy.png'))
     if show:
         plt.show()
 
@@ -42,7 +43,7 @@ def plot_history(history, show=False):
     plt.ylabel('Loss')
     plt.xlabel('Epoch')
     plt.legend(['Train', 'Test'], loc='upper left')
-    plt.savefig('loss.png')
+    plt.savefig(os.path.join(path, model_name + '_loss.png'))
     if show:
         plt.show()
 
@@ -52,6 +53,6 @@ def plot_history(history, show=False):
     plt.ylabel('lr')
     plt.xlabel('Epoch')
     # plt.legend(['Train', 'Test'], loc='upper left')
-    plt.savefig('lr.png')
+    plt.savefig(os.path.join(path, model_name + '_lr.png'))
     if show:
         plt.show()

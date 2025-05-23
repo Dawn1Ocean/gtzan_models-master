@@ -98,7 +98,7 @@ def train_epochs(train_dataloader, test_dataloader, model, criterion, optimizer,
 
     return {'train_loss': train_loss_ls, 'train_acc': train_loss_acc, 'test_loss': test_loss_ls, 'test_acc': test_loss_acc, 'train_lr': train_lr}
 
-def training(model, config, dataloaders):
+def training(model, config, dataloaders, model_path=None, model_name=None, result_path=None):
     train_dataloader, test_dataloader = dataloaders
     model = model.to(device)
     criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
@@ -118,14 +118,17 @@ def training(model, config, dataloaders):
     history = train_epochs(train_dataloader, test_dataloader, model, criterion, optimizer, config, writer, scheduler, scaler=torch.GradScaler())
     writer.close()
     # save the model
-    torch.save(model.state_dict(), config['model_path'])
+    if model_path:
+        torch.save(model.state_dict(), model_path)
     # plot the training history
-    plot_history(history, config['show'])
+    if result_path:
+        plot_history(history, result_path, model_name, config['show'])
 
-def testing(model, config, test_dataloader)->dict:
+def testing(model, config, test_dataloader, model_name=None, result_path=None)->dict:
     # predict the class of test data
     result = test_steps(tqdm(enumerate(test_dataloader), total=len(test_dataloader)), model, nn.CrossEntropyLoss(label_smoothing=0.1))
-    plot_heat_map(result['y_truth'], result['y_pred'], config['show'])
+    if result_path:
+        plot_heat_map(result['y_truth'], result['y_pred'], result_path, model_name, config['show'])
     return {'loss':result['loss'], 'acc':result['acc']}
 
 def kFoldVal(models:list[nn.Module], config, dataloaders:list[tuple[DataLoader, DataLoader]])->float:

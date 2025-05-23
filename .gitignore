@@ -5,4 +5,5 @@
 /Data
 /.venv
 /.python-version
+/result
 uv.lock
