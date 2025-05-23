@@ -61,20 +61,23 @@ class GenreDataset(Dataset):
         self.sr, self.n_mels = sr, n_mels
 
         if self.mel is True and self.aug is False:
-            self.x = np.array([librosa.amplitude_to_db(librosa.feature.melspectrogram(y=x, sr=self.sr, n_mels=self.n_mels)) for x in self.x])
+            self.x = np.array([self._mel(x) for x in self.x])
 
     def __getitem__(self, index):
         x = self.x[index]
         if self.val is False and self.aug is True:
             x = audio_augmentation(x)
             if self.mel is True:
-                x = librosa.feature.melspectrogram(y=x, sr=self.sr, n_mels=self.n_mels)
+                x = self._mel(x)
         x = torch.tensor(x, dtype=torch.float32).to(device)
         y = torch.tensor(self.y[index], dtype=torch.long).to(device)
         return x, y
 
     def __len__(self):
         return len(self.x)
+    
+    def _mel(self, x):
+        return librosa.amplitude_to_db(librosa.feature.melspectrogram(y=x, sr=self.sr, n_mels=self.n_mels))
 
 # def get_mel_set(data_path, data_length):
 #     dataset, labelset = [], []

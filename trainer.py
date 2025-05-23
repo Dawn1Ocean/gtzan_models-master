@@ -128,7 +128,7 @@ def training(model, config, dataloaders):
 
 def testing(model, config, test_dataloader)->dict:
     # predict the class of test data
-    result = test_steps(tqdm(test_dataloader), model, nn.CrossEntropyLoss(label_smoothing=0.1))
+    result = test_steps(tqdm(enumerate(test_dataloader), total=len(test_dataloader)), model, nn.CrossEntropyLoss(label_smoothing=0.1))
     plot_heat_map(result['y_truth'], result['y_pred'], config['show'])
     return {'loss':result['loss'], 'acc':result['acc']}
 
