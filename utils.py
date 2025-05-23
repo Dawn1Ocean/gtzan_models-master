@@ -52,9 +52,6 @@ class GenreDataset(Dataset):
         self.val, self.mel, self.aug = val, mel, aug
         self.sr, self.n_mels = sr, n_mels
 
-        if self.mel is True and self.aug is False:
-            self.x = np.array([self._mel(x) for x in self.x])
-
     def __getitem__(self, index):
         x = self.x[index]
         if self.val is False and self.aug is True:
@@ -71,17 +68,21 @@ class GenreDataset(Dataset):
     def _mel(self, x):
         return librosa.amplitude_to_db(librosa.feature.melspectrogram(y=x, sr=self.sr, n_mels=self.n_mels))
     
-def get_data_set(data_path, data_length):
+def get_data_set(dataset_config):
     dataset, labelset = [], []
     # dataset: the segment of music
     # labelset: convert blues/classical/country/disco/hiphop/jazz/metal/pop/reggae/rock to 0/1/2/3/4/5/6/7/8/9 in order
-    for root, _, files in os.walk(data_path):
+    for root, _, files in os.walk(dataset_config['data_path']):
         for file in tqdm(files, desc=f'{os.path.basename(root).ljust(10)}'):
             genre = file.split('.')[0]
             try:
                 data, sr = librosa.load(os.path.join(root, file))
-                mid_data, mid_samp = len(data) // 2, data_length // 2
-                dataset.append(data[mid_data-mid_samp:mid_data-mid_samp+data_length])
+                mid_data, mid_samp = len(data) // 2, dataset_config['data_length'] // 2
+                data = data[mid_data-mid_samp:mid_data-mid_samp+dataset_config['data_length']]
+                if dataset_config['Mel'] and not dataset_config['Aug']:
+                    data = librosa.feature.melspectrogram(y=data, sr=sr, n_mels=dataset_config['n_mels'])
+                    data = librosa.amplitude_to_db(data)
+                dataset.append(data)
                 labelset.append(genre_dict[genre])
             except RuntimeError as e:
                 pass
@@ -103,12 +104,12 @@ def get_feature_set(data_path):
     return dataset, labelset
 
 # load dataset and preprocess
-def load_data(ratio, random_seed, data_path, data_length=None, type='feature'):
-    match type:
+def load_data(ratio, random_seed, dataset_config):
+    match dataset_config['type']:
         case 'feature':
-            dataset, labelset = get_feature_set(data_path)
+            dataset, labelset = get_feature_set(dataset_config['feature_path'])
         case 'data':
-            dataset, labelset = get_data_set(data_path, data_length)
+            dataset, labelset = get_data_set(dataset_config)
         case _:
             raise NotImplementedError(f"Unknown type: {type}")
     # reshape the data and split the dataset

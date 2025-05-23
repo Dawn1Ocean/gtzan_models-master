@@ -31,15 +31,16 @@ if __name__ == '__main__':
         'epochs': 100,
         'batch_size': 32,
         'lr': 0.0001437,    # initial learning rate
-        'data_path': './Data/genres_original',
-        'feature_path': './Data/features_30_sec.csv',
         'isDev': True,       # True -> Train new model anyway
         'dataset': {
+            'data_path': './Data/genres_original',
+            'feature_path': './Data/features_30_sec.csv',
             'type': 'data',  # 'feature' -> Trainset = features; 'data' -> Trainset = Datas
             'Mel': True,     # Using Mel Spectrogram or not
-            'Aug': False,     # Adding random noise before every epoch (May slow down the training) or not
+            'Aug': True,     # Adding random noise before every epoch (May slow down the training) or not
+            'data_length': 660000,  # If dataset != 'feature',
+            'n_mels': 512,
         },
-        'data_length': 660000,  # If dataset != 'feature'
         'optimizer': torch.optim.AdamW,
         'scheduler': {
             'start_iters': 3,
@@ -50,20 +51,22 @@ if __name__ == '__main__':
         'fold': 0,           # 0 -> not k-fold; k>0 -> k-fold
     }
 
+    dataset_config = config['dataset']
+
     if config['fold']:
         config['test_ratio'] = 0.0  # Reading all of the data
 
     # X_train, y_train is the training set
     # X_test, y_test is the test set
-    X_train, X_test, y_train, y_test = load_data(config['test_ratio'], config['seed'], config['data_path'], config['data_length'], type=config['dataset']['type'])
+    X_train, X_test, y_train, y_test = load_data(config['test_ratio'], config['seed'], dataset_config) # type: ignore
     
     if config['fold']:
         acc = kFoldVal([config['model'](*config['args']).to(device) for _ in range(config['fold'])], config, getKfoldDataloader(X_train, y_train, config, k=config['fold']))
         print(f'{config['fold']}-Fold Validation Accuracy: {acc}')
     else:
         model = config['model'](*config['args']).to(device)
-        train_dataset = GenreDataset(X_train, y_train, mel=config['dataset']['Mel'], aug=config['dataset']['Aug'])
-        test_dataset = GenreDataset(X_test, y_test, val=True, mel=config['dataset']['Mel'])
+        train_dataset = GenreDataset(X_train, y_train, mel=dataset_config['Mel'], aug=dataset_config['Aug'], n_mels=dataset_config['n_mels'])
+        test_dataset = GenreDataset(X_test, y_test, val=True, mel=dataset_config['Mel'], n_mels=dataset_config['n_mels'])
 
         train_dataloader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=True)
         test_dataloader = DataLoader(test_dataset, batch_size=config['batch_size'], shuffle=False)
@@ -78,4 +81,3 @@ if __name__ == '__main__':
         else:
             training(model, config, dataloaders)
         testing(model, config, test_dataloader)
-    
