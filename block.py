@@ -17,7 +17,6 @@ class Conv(nn.Module):
     def forward(self, x:torch.Tensor) -> torch.Tensor:
         return self.act(self.bn(self.conv(x)))
 
-
 class Bottleneck(nn.Module):
     def __init__(self, c1, c2, k, s=1, p='same', e=0.5, shortcut=False, act=nn.SiLU):
         super().__init__()
@@ -31,14 +30,12 @@ class Bottleneck(nn.Module):
 
     def forward(self, x:torch.Tensor)->torch.Tensor:
         return self.cv2(self.cv1(x)) + x if self.shortcut else self.cv2(self.cv1(x))
-    
 
 class Bottleneck2d(Bottleneck):
     def __init__(self, c1, c2, k, s=1, p='same', e=0.5, shortcut=False, act=nn.SiLU):
         super().__init__(c1, c2, k, s, p, e, shortcut, act)
         self.cv1 = CBS2d(c1, self.c, k, s, p, act=act)
         self.cv2 = CBS2d(self.c, c2, k, s, p, act=act)
-
 
 class PositionalEncoding(nn.Module):
     """位置编码模块，支持更长的序列"""
@@ -80,9 +77,8 @@ class PositionalEncoding(nn.Module):
         if self.pe is None or self.max_registered_len < seq_length:
             self._extend_pe(max(seq_length, self.max_registered_len * 2))
             
-        x = x + self.pe[:, :seq_length, :]
+        x = x + self.pe[:, :seq_length, :] # type: ignore
         return self.dropout(x)
-    
 
 class MLP(nn.Module):
     """多层感知机模块"""

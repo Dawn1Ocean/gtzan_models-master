@@ -26,18 +26,18 @@ if __name__ == '__main__':
         'model_path': os.path.join(project_path, "result", "genre_model.pt"),
         'model': "YOLO11s",
         'args': (10,),
-        'seed': 1337,       # the random seed
-        'test_ratio': 0.2,  # the ratio of the test set
+        'seed': 1337,        # the random seed
+        'test_ratio': 0.2,   # the ratio of the test set
         'epochs': 1,
         'batch_size': 32,
         'lr': 0.00001437,    # initial learning rate
         'data_path': './Data/genres_original',
         'feature_path': './Data/features_30_sec.csv',
-        'isDev': True,      # True -> Train new model anyway
+        'isDev': True,       # True -> Train new model anyway
         'dataset': {
             'type': 'data',  # 'feature' -> Trainset = features; 'data' -> Trainset = Datas
-            'Mel': True,
-            'Aug': True,
+            'Mel': True,     # Using Mel Spectrogram or not
+            'Aug': True,     # Adding random noise before every epoch (May slow down the training) or not
         },
         'data_length': 160000,  # If dataset != 'feature'
         'optimizer': torch.optim.AdamW,
@@ -46,20 +46,18 @@ if __name__ == '__main__':
             'start_factor': 1,
             'end_factor': 0.01,
         },
-        'show': False, # plotting
-        'fold': 5,
+        'show': False,       # plotting
+        'fold': 5,           # 0 -> not k-fold; k>0 -> k-fold
     }
 
     if config['fold'] is not False:
-        config['test_ratio'] = 0.0
+        config['test_ratio'] = 0.0  # Reading all of the data
 
     # X_train, y_train is the training set
     # X_test, y_test is the test set
     X_train, X_test, y_train, y_test = load_data(config['test_ratio'], config['seed'], config['data_path'], config['data_length'], type=config['dataset']['type'])
     
-    if config['fold'] is not False:
-        if config['fold'] is True:
-            config['fold'] = 5
+    if config['fold']:
         acc = kFoldVal([globals()[config['model']](*config['args']).to(device) for _ in range(config['fold'])], config, getKfoldDataloader(X_train, y_train, config, k=config['fold']))
         print(f'{config['fold']}-Fold Validation Accuracy: {acc}')
     else:

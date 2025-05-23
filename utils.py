@@ -114,7 +114,7 @@ def load_data(ratio, random_seed, data_path, data_length=None, type='feature'):
     # reshape the data and split the dataset
     dataset = np.array(dataset)
     labelset = np.array(labelset).reshape(-1)
-    if ratio >= 0.01:
+    if ratio:
         X_train, X_test, y_train, y_test = train_test_split(dataset, labelset, test_size=ratio, random_state=random_seed)
         return X_train, X_test, y_train, y_test
     return dataset, [], labelset, []

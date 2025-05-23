@@ -22,7 +22,6 @@ def weight_init(m):
         nn.init.constant_(m.weight, 1)
         nn.init.constant_(m.bias, 0)
 
-
 # build the CNN model
 class Data_Model(nn.Module):
     def __init__(self, label_d, c=16, k=3, kb=5):
