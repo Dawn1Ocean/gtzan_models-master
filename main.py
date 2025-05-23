@@ -54,13 +54,7 @@ if __name__ == '__main__':
 
     # X_train, y_train is the training set
     # X_test, y_test is the test set
-    match config['dataset']['type']:
-        case 'data':
-            X_train, X_test, y_train, y_test = load_data(config['test_ratio'], config['seed'], config['data_path'], config['data_length'], type='data')
-        case 'feature':
-            X_train, X_test, y_train, y_test = load_data(config['test_ratio'], config['seed'], config['feature_path'], type='feature')
-        case _:
-            raise NotImplementedError(f"Dataset type '{config['dataset']['type']}' is not implemented.")
+    X_train, X_test, y_train, y_test = load_data(config['test_ratio'], config['seed'], config['data_path'], config['data_length'], type=config['dataset']['type'])
     
     train_dataset = GenreDataset(X_train, y_train, mel=config['dataset']['Mel'], aug=config['dataset']['Aug'])
     test_dataset = GenreDataset(X_test, y_test, val=True, mel=config['dataset']['Mel'])

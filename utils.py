@@ -41,14 +41,6 @@ def audio_augmentation(audio):
     
     return audio
 
-# def mel_spectrogram(file_path, data_length, isLog=True):
-#     data, sr = librosa.load(file_path)
-#     mid_data, mid_samp = len(data) // 2, data_length // 2
-#     mel = librosa.feature.melspectrogram(y=data[mid_data - mid_samp: mid_data + mid_samp], sr=sr, n_mels=512)
-#     if isLog:
-#         return librosa.amplitude_to_db(mel, ref=np.max)
-#     return mel
-
 # define the dataset class
 class GenreDataset(Dataset):
     def __init__(self, x, y, val=False, mel=False, aug=False, sr=22050, n_mels=512):
@@ -78,22 +70,6 @@ class GenreDataset(Dataset):
     
     def _mel(self, x):
         return librosa.amplitude_to_db(librosa.feature.melspectrogram(y=x, sr=self.sr, n_mels=self.n_mels))
-
-# def get_mel_set(data_path, data_length):
-#     dataset, labelset = [], []
-#     # dataset: the melspectrogram of music
-#     # labelset: convert blues/classical/country/disco/hiphop/jazz/metal/pop/reggae/rock to 0/1/2/3/4/5/6/7/8/9 in order
-#     for root, _, files in os.walk(data_path):
-#         for file in tqdm(files, desc=f'{os.path.basename(root).ljust(10)}'):
-#             genre = file.split('.')[0]
-#             try:
-#                 dataset.append(mel_spectrogram(os.path.join(root, file), data_length))
-#                 labelset.append(genre_dict[genre])
-#             except RuntimeError:
-#                 pass
-#             except AttributeError:
-#                 tqdm.write('There\'s something wrong in ' + file)        
-#     return dataset, labelset
     
 def get_data_set(data_path, data_length):
     dataset, labelset = [], []
