@@ -41,64 +41,59 @@ def audio_augmentation(audio):
     
     return audio
 
-def mel_spectrogram(file_path, data_length, isLog=True):
-    data, sr = librosa.load(file_path)
-    mid_data, mid_samp = len(data) // 2, data_length // 2
-    mel = librosa.feature.melspectrogram(y=data[mid_data - mid_samp: mid_data + mid_samp], sr=sr, n_mels=512)
-    if isLog:
-        return librosa.amplitude_to_db(mel, ref=np.max)
-    return mel
+# def mel_spectrogram(file_path, data_length, isLog=True):
+#     data, sr = librosa.load(file_path)
+#     mid_data, mid_samp = len(data) // 2, data_length // 2
+#     mel = librosa.feature.melspectrogram(y=data[mid_data - mid_samp: mid_data + mid_samp], sr=sr, n_mels=512)
+#     if isLog:
+#         return librosa.amplitude_to_db(mel, ref=np.max)
+#     return mel
 
-# define the dataset class  
+# define the dataset class
 class GenreDataset(Dataset):
-    def __init__(self, x, y, sr=22050, val=False, mel=False, aug=False):
+    def __init__(self, x, y, val=False, mel=False, aug=False, sr=22050, n_mels=512):
         assert len(x) == len(y), "The length of x and y must be the same"
         assert len(x) > 0, "The length of x must be greater than 0"
         assert (val is True and aug is True) is False, "val and aug cannot be True at the same time"
 
-        self.x = x
-        self.y = y
-        self.sr = sr
-        self.val = val
-        self.mel = mel
-        self.aug = aug
+        self.x, self.y = x, y
+        self.val, self.mel, self.aug = val, mel, aug
+        self.sr, self.n_mels = sr, n_mels
 
-        if self.val is True and self.mel is True:
-            self.x = np.array([librosa.feature.melspectrogram(y=x, sr=self.sr, n_mels=512) for x in self.x])
+        if self.mel is True and self.aug is False:
+            self.x = np.array([librosa.amplitude_to_db(librosa.feature.melspectrogram(y=x, sr=self.sr, n_mels=self.n_mels)) for x in self.x])
 
     def __getitem__(self, index):
         x = self.x[index]
-        if self.val is False:
-            if self.aug is True:
-                x = audio_augmentation(x)
+        if self.val is False and self.aug is True:
+            x = audio_augmentation(x)
             if self.mel is True:
-                x = librosa.feature.melspectrogram(y=x, sr=self.sr, n_mels=512)
+                x = librosa.feature.melspectrogram(y=x, sr=self.sr, n_mels=self.n_mels)
         x = torch.tensor(x, dtype=torch.float32).to(device)
         y = torch.tensor(self.y[index], dtype=torch.long).to(device)
         return x, y
 
     def __len__(self):
         return len(self.x)
-    
 
-def get_mel_set(data_path, data_length):
-    dataset, labelset = [], []
-    # dataset: the melspectrogram of music
-    # labelset: convert blues/classical/country/disco/hiphop/jazz/metal/pop/reggae/rock to 0/1/2/3/4/5/6/7/8/9 in order
-    for root, _, files in os.walk(data_path):
-        for file in tqdm(files, desc=f'{os.path.basename(root).ljust(10)}'):
-            genre = file.split('.')[0]
-            try:
-                dataset.append(mel_spectrogram(os.path.join(root, file), data_length))
-                labelset.append(genre_dict[genre])
-            except RuntimeError:
-                pass
-            except AttributeError:
-                tqdm.write('There\'s something wrong in ' + file)        
-    return dataset, labelset
+# def get_mel_set(data_path, data_length):
+#     dataset, labelset = [], []
+#     # dataset: the melspectrogram of music
+#     # labelset: convert blues/classical/country/disco/hiphop/jazz/metal/pop/reggae/rock to 0/1/2/3/4/5/6/7/8/9 in order
+#     for root, _, files in os.walk(data_path):
+#         for file in tqdm(files, desc=f'{os.path.basename(root).ljust(10)}'):
+#             genre = file.split('.')[0]
+#             try:
+#                 dataset.append(mel_spectrogram(os.path.join(root, file), data_length))
+#                 labelset.append(genre_dict[genre])
+#             except RuntimeError:
+#                 pass
+#             except AttributeError:
+#                 tqdm.write('There\'s something wrong in ' + file)        
+#     return dataset, labelset
     
 def get_data_set(data_path, data_length):
-    dataset, labelset = np.zeros((1, data_length)), []
+    dataset, labelset = [], []
     # dataset: the segment of music
     # labelset: convert blues/classical/country/disco/hiphop/jazz/metal/pop/reggae/rock to 0/1/2/3/4/5/6/7/8/9 in order
     for root, _, files in os.walk(data_path):
@@ -106,14 +101,14 @@ def get_data_set(data_path, data_length):
             genre = file.split('.')[0]
             try:
                 data, sr = librosa.load(os.path.join(root, file))
-                # data = librosa.resample(data, orig_sr=sr, target_sr=sr)
-                dataset = np.vstack((dataset, data[:data_length]))
+                mid_data, mid_samp = len(data) // 2, data_length // 2
+                dataset.append(data[mid_data-mid_samp:mid_data-mid_samp+data_length])
                 labelset.append(genre_dict[genre])
             except RuntimeError as e:
                 pass
             except AttributeError as e:
                 tqdm.write('There\'s something wrong in ' + file)
-    return dataset[1:,:], labelset
+    return dataset, labelset
 
 def get_feature_set(data_path):
     # dataset: features of the segment of music
@@ -135,8 +130,6 @@ def load_data(ratio, random_seed, data_path, data_length=None, type='feature'):
             dataset, labelset = get_feature_set(data_path)
         case 'data':
             dataset, labelset = get_data_set(data_path, data_length)
-        case 'mel':
-            dataset, labelset = get_mel_set(data_path, data_length)
         case _:
             raise NotImplementedError(f"Unknown type: {type}")
     # reshape the data and split the dataset

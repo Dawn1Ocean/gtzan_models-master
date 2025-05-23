@@ -35,8 +35,8 @@ if __name__ == '__main__':
         'feature_path': './Data/features_30_sec.csv',
         'isDev': True,      # True -> Train new model anyway
         'dataset': {
-            'type': 'mel',  # 'feature' -> Trainset = features; 'original' -> Trainset = Datas; 'mel', 'augMel' -> Trainset = melspectrogram
-            'Mel': False,
+            'type': 'data',  # 'feature' -> Trainset = features; 'data' -> Trainset = Datas
+            'Mel': True,
             'Aug': False,
         },
         'data_length': 660000,  # If dataset != 'feature'
@@ -55,12 +55,10 @@ if __name__ == '__main__':
     # X_train, y_train is the training set
     # X_test, y_test is the test set
     match config['dataset']['type']:
-        case 'original' | 'augMel':
+        case 'data':
             X_train, X_test, y_train, y_test = load_data(config['test_ratio'], config['seed'], config['data_path'], config['data_length'], type='data')
         case 'feature':
             X_train, X_test, y_train, y_test = load_data(config['test_ratio'], config['seed'], config['feature_path'], type='feature')
-        case 'mel':
-            X_train, X_test, y_train, y_test = load_data(config['test_ratio'], config['seed'], config['data_path'], config['data_length'], type='mel')
         case _:
             raise NotImplementedError(f"Dataset type '{config['dataset']['type']}' is not implemented.")
     
