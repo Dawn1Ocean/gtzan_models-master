@@ -38,7 +38,7 @@ if __name__ == '__main__':
             'feature_path': './Data/features_30_sec.csv',
             'type': 'data',  # 'feature' -> Trainset = features; 'data' -> Trainset = Datas
             'Mel': True,     # Using Mel Spectrogram or not
-            'Aug': False,     # Adding random noise before every epoch (May slow down the training) or not
+            'Aug': True,     # Adding random noise before every epoch (May slow down the training) or not
             'data_length': 660000,  # If dataset != 'feature',
             'n_mels': 128,
         },
@@ -50,7 +50,7 @@ if __name__ == '__main__':
         },
         'show': False,       # plotting
         'fold': 0,           # 0 -> not k-fold; k>0 -> k-fold
-        'summary': False,    # Show summary
+        'summary': True,    # Show summary
     }
 
     if not os.path.exists(config['result_path']):
@@ -72,7 +72,7 @@ if __name__ == '__main__':
         model = globals()[config['model']](*config['args']).to(device)
 
         train_dataset = GenreDataset(X_train, y_train, mel=dataset_config['Mel'], aug=dataset_config['Aug'], n_mels=dataset_config['n_mels'])
-        test_dataset = GenreDataset(X_test, y_test, val=True, mel=dataset_config['Mel'], n_mels=dataset_config['n_mels'])
+        test_dataset = GenreDataset(X_test, y_test, val=True, mel=dataset_config['Mel'], aug=dataset_config['Aug'], n_mels=dataset_config['n_mels'])
 
         train_dataloader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=True)
         test_dataloader = DataLoader(test_dataset, batch_size=config['batch_size'], shuffle=False)

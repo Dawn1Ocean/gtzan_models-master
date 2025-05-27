@@ -46,7 +46,6 @@ class GenreDataset(Dataset):
     def __init__(self, x, y, val=False, mel=False, aug=False, sr=22050, n_mels=512):
         assert len(x) == len(y), "The length of x and y must be the same"
         assert len(x) > 0, "The length of x must be greater than 0"
-        assert (val is True and aug is True) is False, "val and aug cannot be True at the same time"
 
         self.x, self.y = x, y
         self.val, self.mel, self.aug = val, mel, aug
