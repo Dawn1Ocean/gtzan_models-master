@@ -1,6 +1,7 @@
 import datetime
 import torch
 import os
+import sys
 
 from torch.utils.data import DataLoader
 from torchinfo import summary
@@ -29,7 +30,7 @@ if __name__ == '__main__':
         'args': (10,),
         'seed': 1337,        # the random seed
         'test_ratio': 0.2,   # the ratio of the test set
-        'epochs': 220,
+        'epochs': 250,
         'batch_size': 64,
         'lr': 0.0001437,    # initial learning rate
         'isDev': True,       # True -> Train new model anyway
@@ -88,5 +89,7 @@ if __name__ == '__main__':
         else:
             training(model, config, dataloaders, model_path, config['model'], config['result_path'])
             if config['summary']:
+                sys.stdout = open(os.path.join(config['result_path'], config['model'] + '_summary.txt'), 'w', encoding='utf-8')
                 summary(model, (config['batch_size'], *train_dataset[0][0].shape), col_names=["input_size", "kernel_size", "output_size"], verbose=2)
+                sys.stdout = sys.__stdout__
         testing(model, config, test_dataloader, config['model'], config['result_path'])
