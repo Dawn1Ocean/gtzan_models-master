@@ -29,8 +29,8 @@ if __name__ == '__main__':
         'args': (10,),
         'seed': 1337,        # the random seed
         'test_ratio': 0.2,   # the ratio of the test set
-        'epochs': 100,
-        'batch_size': 32,
+        'epochs': 220,
+        'batch_size': 64,
         'lr': 0.0001437,    # initial learning rate
         'isDev': True,       # True -> Train new model anyway
         'dataset': {
@@ -39,16 +39,17 @@ if __name__ == '__main__':
             'type': 'data',  # 'feature' -> Trainset = features; 'data' -> Trainset = Datas
             'Mel': True,     # Using Mel Spectrogram or not
             'Aug': True,     # Adding random noise before every epoch (May slow down the training) or not
+            'noise_factor': 0.001, # Valid when Aug == True
             'data_length': 660000,  # If dataset != 'feature',
-            'n_mels': 128,
+            'n_mels': 256,
         },
         'optimizer': torch.optim.AdamW,
         'scheduler': {
             'start_iters': 3,
             'start_factor': 1,
-            'end_factor': 0.01,
+            'end_factor': 0.2,
         },
-        'show': False,       # plotting
+        'show': True,       # plotting
         'fold': 0,           # 0 -> not k-fold; k>0 -> k-fold
         'summary': True,    # Show summary
     }
@@ -71,7 +72,7 @@ if __name__ == '__main__':
     else:
         model = globals()[config['model']](*config['args']).to(device)
 
-        train_dataset = GenreDataset(X_train, y_train, mel=dataset_config['Mel'], aug=dataset_config['Aug'], n_mels=dataset_config['n_mels'])
+        train_dataset = GenreDataset(X_train, y_train, mel=dataset_config['Mel'], aug=dataset_config['Aug'], noise_factor=dataset_config['noise_factor'], n_mels=dataset_config['n_mels'])
         test_dataset = GenreDataset(X_test, y_test, val=True, mel=dataset_config['Mel'], aug=dataset_config['Aug'], n_mels=dataset_config['n_mels'])
 
         train_dataloader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=True)
@@ -87,5 +88,5 @@ if __name__ == '__main__':
         else:
             training(model, config, dataloaders, model_path, config['model'], config['result_path'])
             if config['summary']:
-                summary(model, (config['batch_size'], *X_train.shape[1:]), col_names=["input_size", "kernel_size", "output_size"], verbose=2)
+                summary(model, (config['batch_size'], *train_dataset[0][0].shape), col_names=["input_size", "kernel_size", "output_size"], verbose=2)
         testing(model, config, test_dataloader, config['model'], config['result_path'])

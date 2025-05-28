@@ -30,32 +30,32 @@ genre_dict = {
     'rock': 9,
 }
 
-def audio_augmentation(audio):
+def audio_augmentation(audio, noise_factor):
     # 随机缩放
     # scale_factor = np.random.rand(0.5, 1.5)
     # audio = audio * scale_factor
     
     # 随机高斯噪声
-    noise = np.random.randn(*audio.shape) * 0.01
+    noise = np.random.randn(*audio.shape) * noise_factor
     audio += noise
     
     return audio
 
 # define the dataset class
 class GenreDataset(Dataset):
-    def __init__(self, x, y, val=False, mel=False, aug=False, sr=22050, n_mels=512):
+    def __init__(self, x, y, val=False, mel=False, aug=False, noise_factor=0.01, sr=22050, n_mels=512):
         assert len(x) == len(y), "The length of x and y must be the same"
         assert len(x) > 0, "The length of x must be greater than 0"
 
         self.x, self.y = x, y
         self.val, self.mel, self.aug = val, mel, aug
-        self.sr, self.n_mels = sr, n_mels
+        self.noise_factor, self.sr, self.n_mels = noise_factor, sr, n_mels
 
     def __getitem__(self, index):
         x = self.x[index]
         if self.aug:
             if not self.val:
-                x = audio_augmentation(x)
+                x = audio_augmentation(x, self.noise_factor)
             if self.mel:
                 x = self._mel(x)
         x = torch.tensor(x, dtype=torch.float32).to(device)

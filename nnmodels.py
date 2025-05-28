@@ -382,7 +382,7 @@ class CNN_2D_Attention_Model(nn.Module):
         self.fc = nn.Sequential(nn.LazyLinear(32*c),
                                  nn.SiLU(),
                                  nn.BatchNorm1d(32*c),)
-        self.mlp = MLP(input_dim=32*c, hidden_dim=16*c, output_dim=label_d, dropout=0.6)
+        self.mlp = MLP(input_dim=32*c, hidden_dim=16*c, output_dim=label_d, dropout=0.4)
         self.act = nn.Softmax(dim=1)
 
     def forward(self, x):
