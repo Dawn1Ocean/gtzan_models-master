@@ -74,6 +74,8 @@ def get_data_set(dataset_config):
     # labelset: convert blues/classical/country/disco/hiphop/jazz/metal/pop/reggae/rock to 0/1/2/3/4/5/6/7/8/9 in order
     for root, _, files in os.walk(dataset_config['data_path']):
         for file in tqdm(files, desc=f'{os.path.basename(root).ljust(10)}'):
+            if file.startswith('.') or not file.endswith(('.wav', '.png', '.csv')): # 确保是音频文件后缀
+                continue # 跳过当前文件，处理下一个
             genre = file.split('.')[0]
             try:
                 data, sr = librosa.load(os.path.join(root, file))
