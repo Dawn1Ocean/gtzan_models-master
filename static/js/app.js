@@ -110,12 +110,68 @@ function setupEventListeners() {
     playBtn.addEventListener('click', playAudio);
     pauseBtn.addEventListener('click', pauseAudio);
     
+    // 进度条拖拽和点击
+    const progressContainer = document.querySelector('.progress-container');
+    
     // 进度条点击
-    document.querySelector('.progress-container').addEventListener('click', (e) => {
+    progressContainer.addEventListener('click', (e) => {
         if (audioBuffer && uploadedFiles[activeFileIndex].status === 'complete') {
             const rect = e.target.getBoundingClientRect();
             const clickPosition = (e.clientX - rect.left) / rect.width;
             seekAudio(clickPosition * audioBuffer.duration);
+        }
+    });
+    
+    // 进度条拖拽功能
+    let isDragging = false;
+    
+    progressContainer.addEventListener('mousedown', (e) => {
+        if (audioBuffer && uploadedFiles[activeFileIndex].status === 'complete') {
+            isDragging = true;
+            document.body.style.cursor = 'grabbing';
+            
+            // 禁用过渡效果以使拖动更流畅
+            progressBar.style.transition = 'none';
+            
+            // 立即更新位置
+            const rect = progressContainer.getBoundingClientRect();
+            const clickPosition = (e.clientX - rect.left) / rect.width;
+            progressBar.style.width = `${clickPosition * 100}%`;
+            updatePlayhead(clickPosition);
+        }
+    });
+    
+    document.addEventListener('mousemove', (e) => {
+        if (isDragging && audioBuffer) {
+            const rect = progressContainer.getBoundingClientRect();
+            let movePosition = (e.clientX - rect.left) / rect.width;
+            
+            // 限制在范围内
+            movePosition = Math.max(0, Math.min(1, movePosition));
+            
+            // 更新UI
+            progressBar.style.width = `${movePosition * 100}%`;
+            updatePlayhead(movePosition);
+            currentTimeDisplay.textContent = formatTime(movePosition * audioBuffer.duration);
+        }
+    });
+    
+    document.addEventListener('mouseup', (e) => {
+        if (isDragging && audioBuffer) {
+            isDragging = false;
+            document.body.style.cursor = '';
+            
+            // 恢复过渡效果
+            progressBar.style.transition = 'width 0.1s linear';
+            
+            // 计算最终位置并跳转
+            const rect = progressContainer.getBoundingClientRect();
+            let finalPosition = (e.clientX - rect.left) / rect.width;
+            
+            // 限制在范围内
+            finalPosition = Math.max(0, Math.min(1, finalPosition));
+            
+            seekAudio(finalPosition * audioBuffer.duration);
         }
     });
 }
@@ -400,12 +456,15 @@ function updatePlayback() {
     
     const currentTime = audioContext.currentTime - startTime;
     
-    // 如果到达结尾，停止播放
+    // 如果到达结尾，停止播放并重置进度条
     if (currentTime >= audioBuffer.duration) {
-        pauseAudio();
-        currentTimeDisplay.textContent = formatTime(audioBuffer.duration);
-        progressBar.style.width = '100%';
-        updatePlayhead(1);
+        stopAudio();
+        // 重置到开头
+        currentTimeDisplay.textContent = formatTime(0);
+        progressBar.style.width = '0%';
+        updatePlayhead(0);
+        playBtn.disabled = false;
+        pauseBtn.disabled = true;
         return;
     }
     

@@ -251,6 +251,7 @@ header h1 span {
     border-radius: 5px;
     overflow: hidden;
     position: relative;
+    cursor: pointer;
 }
 
 .progress-bar {
@@ -258,6 +259,24 @@ header h1 span {
     background-color: var(--secondary-color);
     width: 0;
     transition: width 0.1s linear;
+    position: relative;
+}
+
+.progress-bar::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 10px;
+    height: 10px;
+    background-color: var(--primary-color);
+    border-radius: 50%;
+    display: none;
+}
+
+.progress-container:hover .progress-bar::after {
+    display: block;
 }
 
 .visualization-container {
