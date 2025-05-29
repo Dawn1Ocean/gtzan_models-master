@@ -7,8 +7,8 @@
 /.venv
 /.python-version
 /result
-/.vscode
 /uploads
+/.vscode
 uv.lock
 .DS_Store
 .Icon?
