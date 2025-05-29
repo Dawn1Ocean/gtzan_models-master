@@ -203,6 +203,7 @@ function processFile(fileIndex) {
         
         // 更新UI
         updateFileStatus(fileIndex, 'complete', '完成');
+        updateFileListGenre(fileIndex);
         
         // 如果这是第一个完成的文件，自动选择它
         if (activeFileIndex === -1) {
@@ -548,22 +549,36 @@ function displayPredictions(predictions) {
 
 // 创建流派光晕效果
 function createGenreAura(predictions) {
-    // 取前三个预测作为光晕颜色
     const top3 = predictions.slice(0, 3);
-    
-    // 创建渐变光晕
-    let gradientCSS = 'radial-gradient(circle, ';
-    
-    top3.forEach((prediction, index) => {
-        const alpha = 0.7 - (index * 0.2); // 降低透明度
-        gradientCSS += `${prediction.color}${Math.round(alpha * 100)} ${index * 20}%, `;
+    const total = top3.reduce((sum, p) => sum + p.probability, 0);
+    let accumulated = 0;
+    const stops = top3.map(p => {
+        const start = (accumulated / total) * 100;
+        accumulated += p.probability;
+        const end = (accumulated / total) * 100;
+        return `${p.color} ${start.toFixed(1)}% ${end.toFixed(1)}%`;
     });
-    
-    gradientCSS += 'rgba(18, 18, 18, 0) 70%)';
+    const gradientCSS = `conic-gradient(from 0deg, ${stops.join(', ')})`;
     genreAura.style.background = gradientCSS;
-    
-    // 添加文本
-    genreAura.innerHTML = `<span style="color: white; font-weight: bold; font-size: 1.2rem;">${predictions[0].genre}</span>`;
+    // overlay text remains static
+    genreAura.innerHTML = `<div class="genre-aura-text">${predictions[0].genre}</div>`;
+}
+
+// 更新文件列表条目以显示流派和颜色
+function updateFileListGenre(fileIndex) {
+    const listItems = fileList.querySelectorAll('li');
+    const li = listItems[fileIndex];
+    const fileData = uploadedFiles[fileIndex];
+    if (fileData.predictions) {
+        const pred = fileData.predictions[0];
+        li.innerHTML = `
+            <span class="file-color" style="background-color: ${pred.color};"></span>
+            <span class="file-name">${fileData.file.name}</span>
+            <span class="file-genre">${pred.genre}</span>
+            <span class="file-status complete">完成</span>
+        `;
+        li.addEventListener('click', () => selectFile(fileIndex));
+    }
 }
 
 // 创建流派图表
