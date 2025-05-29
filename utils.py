@@ -13,8 +13,8 @@ __all__ = ('device', 'GenreDataset', 'get_data_set', 'get_feature_set', 'load_da
 device = torch.device("cpu")
 if torch.cuda.is_available():
     device = torch.device("cuda:0")
-elif torch.backends.mps.is_available():
-    device = torch.device("mps")
+# elif torch.backends.mps.is_available():
+#     device = torch.device("mps")
 print("Using {} device".format(device))
 
 genre_dict = {

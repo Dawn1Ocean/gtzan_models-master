@@ -31,9 +31,9 @@ if __name__ == '__main__':
         'seed': 1337,        # the random seed
         'test_ratio': 0.2,   # the ratio of the test set
         'epochs': 500,
-        'batch_size': 48,
+        'batch_size': 1,
         'lr': 0.0001437,    # initial learning rate
-        'isDev': True,       # True -> Train new model anyway
+        'isDev': False,       # True -> Train new model anyway
         'dataset': {
             'data_path': './Data/genres_original',
             'feature_path': './Data/features_30_sec.csv',
@@ -50,10 +50,10 @@ if __name__ == '__main__':
             'start_factor': 1,
             'end_factor': 0.2,
         },
-        'show': False,       # plotting
+        'show': True,       # plotting
         'fold': 0,           # 0 -> not k-fold; k>0 -> k-fold
         'summary': False,    # Show summary
-        'workers': 4,       # Number of workers for DataLoader
+        'workers': 1,       # Number of workers for DataLoader
     }
 
     if not os.path.exists(config['result_path']):
@@ -85,7 +85,7 @@ if __name__ == '__main__':
         if os.path.exists(model_path) and not config['isDev']:
             # import the pre-trained model if it exists
             print('Import the pre-trained model, skip the training process')
-            model.load_state_dict(torch.load(model_path))
+            model.load_state_dict(torch.load(model_path, map_location=device))
             model.eval()
         else:
             training(model, config, dataloaders, model_path, config['model'], config['result_path'])
