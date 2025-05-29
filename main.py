@@ -30,8 +30,8 @@ if __name__ == '__main__':
         'args': (10,),
         'seed': 1337,        # the random seed
         'test_ratio': 0.2,   # the ratio of the test set
-        'epochs': 250,
-        'batch_size': 64,
+        'epochs': 500,
+        'batch_size': 48,
         'lr': 0.0001437,    # initial learning rate
         'isDev': True,       # True -> Train new model anyway
         'dataset': {
@@ -50,9 +50,10 @@ if __name__ == '__main__':
             'start_factor': 1,
             'end_factor': 0.2,
         },
-        'show': True,       # plotting
+        'show': False,       # plotting
         'fold': 0,           # 0 -> not k-fold; k>0 -> k-fold
-        'summary': True,    # Show summary
+        'summary': False,    # Show summary
+        'workers': 4,       # Number of workers for DataLoader
     }
 
     if not os.path.exists(config['result_path']):
@@ -76,8 +77,8 @@ if __name__ == '__main__':
         train_dataset = GenreDataset(X_train, y_train, mel=dataset_config['Mel'], aug=dataset_config['Aug'], noise_factor=dataset_config['noise_factor'], n_mels=dataset_config['n_mels'])
         test_dataset = GenreDataset(X_test, y_test, val=True, mel=dataset_config['Mel'], aug=dataset_config['Aug'], n_mels=dataset_config['n_mels'])
 
-        train_dataloader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=True)
-        test_dataloader = DataLoader(test_dataset, batch_size=config['batch_size'], shuffle=False)
+        train_dataloader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=True, num_workers=config['workers'], persistent_workers=True)
+        test_dataloader = DataLoader(test_dataset, batch_size=config['batch_size'], shuffle=False, num_workers=2*config['workers'], persistent_workers=True)
 
         dataloaders = (train_dataloader, test_dataloader)
         model.apply(weight_init)
