@@ -21,6 +21,30 @@ body {
     background-color: var(--background-color);
     color: var(--text-color);
     line-height: 1.6;
+    position: relative;
+    overflow-x: hidden;
+}
+
+/* 流体背景效果 */
+#fluid-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--background-color);
+    z-index: -1;
+    overflow: hidden;
+}
+
+.fluid-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    opacity: 0.6;
+    transition: all 0.5s ease-out;
+    mix-blend-mode: screen;
+    will-change: transform, opacity, filter;
 }
 
 .container {
@@ -28,6 +52,8 @@ body {
     max-width: 1200px;
     margin: 0 auto;
     padding: 20px;
+    position: relative;
+    z-index: 1;
 }
 
 /* 标题样式 */
@@ -36,6 +62,9 @@ header {
     margin-bottom: 30px;
     padding: 20px 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    background-color: rgba(30, 30, 30, 0.7);
+    border-radius: 10px;
 }
 
 header h1 {
@@ -60,10 +89,11 @@ header h1 span {
 
 /* 上传区域样式 */
 .upload-section {
-    background-color: var(--surface-color);
+    background-color: rgba(30, 30, 30, 0.8);
     border-radius: 10px;
     padding: 20px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
 }
 
 .upload-area {
@@ -196,10 +226,11 @@ header h1 span {
 
 /* 可视化区域样式 */
 .visualization-section {
-    background-color: var(--surface-color);
+    background-color: rgba(30, 30, 30, 0.8);
     border-radius: 10px;
     padding: 20px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
 }
 
 .currently-playing {
