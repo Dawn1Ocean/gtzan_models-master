@@ -86,7 +86,7 @@ def process_audio(file_path, duration=30):
         logits = model.mlp(x)
         
         # 使用一个较高的温度参数的softmax函数来平滑概率分布
-        temperature = 10.0  # 较高的温度会使分布更加平滑
+        temperature = 5.0  # 较高的温度会使分布更加平滑
         probabilities = F.softmax(logits / temperature, dim=1)[0].cpu().numpy()
     
     # 收集结果
