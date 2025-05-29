@@ -1,10 +1,87 @@
-# Installation
+# 音乐流派分类可视化WebApp
 
-```bash
-uv sync
-```
+这是一个基于深度学习的音乐流派分类项目，使用卷积神经网络和注意力机制来分析音频并将其分类为10种不同的音乐流派。
 
-# gtzan_models
+## 功能特点
+
+- 支持上传WAV音频文件并进行分析
+- 自动提取音频中间30秒并转换为Mel频谱图
+- 实时显示音频波形和频谱图
+- 炫酷的流派预测可视化
+    - 根据预测结果创建多彩光晕效果
+    - 使用条形图显示各个流派的匹配度
+    - 流派预测结果列表显示
+- 支持多文件上传和管理
+- 交互式音频播放控制
+
+## 支持的音乐流派
+
+- Blues（蓝调）- `#0033cc`
+- Classical（古典）- `#e6b800`
+- Country（乡村）- `#996633`
+- Disco（迪斯科）- `#cc00cc`
+- Hip-Hop（嘻哈）- `#ff3300`
+- Jazz（爵士）- `#009999`
+- Metal（金属）- `#333333`
+- Pop（流行）- `#ff66b3`
+- Reggae（雷鬼）- `#00cc00`
+- Rock（摇滚）- `#cc0000`
+
+## 安装与运行
+
+1. 安装依赖：
+
+    ```bash
+    # 使用uv
+    uv sync
+
+    # 或使用传统的pip
+    python -m venv venv
+    source venv/bin/activate.fish  # fish shell
+    pip install -r requirements.txt
+    ```
+
+2. 运行WebApp：
+
+    对于Fish Shell：
+
+    ```fish
+    ./run.fish
+    ```
+
+    对于Bash Shell：
+
+    ```bash
+    ./run.sh
+    ```
+
+    或者直接运行：
+
+    ```
+    python app.py
+    ```
+
+3. 在浏览器中访问：`http://127.0.0.1:5000`
+
+## 使用方法
+
+1. 在网页中点击上传区域或拖放音频文件
+2. 等待分析完成（模型将提取音频特征并进行分类）
+3. 查看分析结果，包括波形图、频谱图和流派预测
+4. 使用播放控制来听取上传的音频
+5. 通过可视化了解音频属于哪种音乐流派
+
+## 项目结构
+
+- `app.py`: Flask应用程序入口
+- `nnmodels.py`: 神经网络模型定义
+- `utils.py`: 工具函数
+- `templates/`: HTML模板
+- `static/`: CSS、JavaScript和其他静态资源
+- `uploads/`: 上传的音频文件
+- `result/`: 训练好的模型
+
+## 原始项目配置
 
 ```Python
 config = {
@@ -38,6 +115,8 @@ config = {
         'summary': False,    # Show summary
     }
 ```
+
+## 模型结构
 
 ```Python
 class CNN_2D_Attention_Model(nn.Module):

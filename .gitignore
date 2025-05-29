@@ -6,7 +6,7 @@
 /.venv
 /.python-version
 /result
+/.vscode
 uv.lock
 .DS_Store
 .Icon?
-.vscode
