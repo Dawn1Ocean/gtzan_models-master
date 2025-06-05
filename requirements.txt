@@ -1,3 +1,4 @@
+# filepath: /Users/ethanpixar/Desktop/gtzan_models/requirements.txt
 librosa
 matplotlib
 numpy
@@ -7,3 +8,5 @@ torch
 torchinfo
 tqdm
 tensorboard
+flask
+soundfile

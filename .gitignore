@@ -1,11 +1,15 @@
 *.pt
 *.png
+*.wav
 /logs
 /__pycache__
 /Data
-/.venv
-/.python-version
 /result
+/uploads
+/.venv
+/venv
+/.vscode
+/.python-version
 uv.lock
 .DS_Store
 .Icon?

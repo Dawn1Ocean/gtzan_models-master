@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音乐流派识别器</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+</head>
+<body>
+    <!-- 背景流体效果 -->
+    <div id="fluid-background"></div>
+    
+    <div class="container">
+        <header>
+            <h1>音乐流派识别器 <span>AI音乐分类</span></h1>
+        </header>
+        
+        <div class="main-content">
+            <div class="upload-section">            <div class="upload-area" id="dropArea">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <p>拖放或点击上传音乐文件</p>
+                <input type="file" id="fileInput" accept="audio/*" multiple>
+            </div>
+            <div class="example-files">
+                <h3>示例文件</h3>
+                <ul>
+                    <li><a href="{{ url_for('static', filename='example_blues.wav') }}" download>Blues 示例</a></li>
+                    <li><a href="{{ url_for('static', filename='example_rock.wav') }}" download>Rock 示例</a></li>
+                    <li><a href="{{ url_for('static', filename='example_classical.wav') }}" download>Classical 示例</a></li>
+                </ul>
+            </div>
+            <div class="upload-list">
+                    <h3>上传列表</h3>
+                    <ul id="fileList"></ul>
+                </div>
+            </div>
+            
+            <div class="visualization-section">
+                <div class="currently-playing">
+                    <h3 id="currentFileName">未选择文件</h3>
+                    <div class="audio-controls">
+                        <button id="playBtn" class="control-btn" disabled><i class="fas fa-play"></i></button>
+                        <button id="pauseBtn" class="control-btn" disabled><i class="fas fa-pause"></i></button>
+                        <div class="progress-container">
+                            <div id="progressBar" class="progress-bar"></div>
+                        </div>
+                        <span id="currentTime">0:00</span> / <span id="duration">0:00</span>
+                    </div>
+                </div>
+                
+                <div class="visualization-container">
+                    <div class="waveform-container">
+                        <canvas id="waveformCanvas"></canvas>
+                        <div id="playhead"></div>
+                    </div>
+                    <div class="spectrogram-container">
+                        <canvas id="spectrogramCanvas"></canvas>
+                    </div>
+                </div>
+                
+                <div class="genre-results">
+                    <h3>流派分析结果</h3>
+                    <div class="genre-visualization">
+                        <div class="genre-aura" id="genreAura"></div>
+                        <div class="genre-chart-container">
+                            <canvas id="genreChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="genre-details">
+                        <ul id="genreList"></ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="spinner"></div>
+            <p>分析中...</p>
+        </div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

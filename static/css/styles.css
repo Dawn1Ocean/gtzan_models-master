@@ -1,0 +1,503 @@
+/* 全局样式 */
+:root {
+    --primary-color: #6200ee;
+    --secondary-color: #03dac6;
+    --background-color: #121212;
+    --surface-color: #1e1e1e;
+    --text-color: #ffffff;
+    --text-secondary-color: #b0b0b0;
+    --error-color: #cf6679;
+    --success-color: #00c853;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.6;
+    position: relative;
+    overflow-x: hidden;
+}
+
+/* 流体背景效果 */
+#fluid-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--background-color);
+    z-index: -1;
+    overflow: hidden;
+}
+
+.fluid-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    opacity: 0.6;
+    transition: all 0.5s ease-out;
+    mix-blend-mode: screen;
+    will-change: transform, opacity, filter;
+}
+
+.container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    position: relative;
+    z-index: 1;
+}
+
+/* 标题样式 */
+header {
+    text-align: center;
+    margin-bottom: 30px;
+    padding: 20px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    background-color: rgba(30, 30, 30, 0.7);
+    border-radius: 10px;
+}
+
+header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+header h1 span {
+    display: block;
+    font-size: 1rem;
+    color: var(--text-secondary-color);
+    margin-top: 5px;
+}
+
+/* 主要内容布局 */
+.main-content {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 20px;
+}
+
+/* 上传区域样式 */
+.upload-section {
+    background-color: rgba(30, 30, 30, 0.8);
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+}
+
+.upload-area {
+    border: 2px dashed rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    padding: 30px;
+    text-align: center;
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.upload-area:hover, .upload-area.drag-over {
+    border-color: var(--primary-color);
+    background-color: rgba(98, 0, 238, 0.1);
+}
+
+.upload-area i {
+    font-size: 3rem;
+    color: var(--secondary-color);
+    margin-bottom: 15px;
+}
+
+.upload-area p {
+    margin-bottom: 10px;
+    color: var(--text-secondary-color);
+}
+
+.upload-area input[type="file"] {
+    display: none;
+}
+
+.example-files {
+    margin: 20px 0;
+    padding: 15px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+}
+
+.example-files h3 {
+    margin-bottom: 10px;
+    font-size: 1rem;
+    color: var(--text-color);
+}
+
+.example-files ul {
+    list-style: none;
+}
+
+.example-files li {
+    margin-bottom: 8px;
+}
+
+.example-files a {
+    color: var(--secondary-color);
+    text-decoration: none;
+    display: block;
+    padding: 5px 10px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.example-files a:hover {
+    background-color: rgba(3, 218, 198, 0.1);
+}
+
+.upload-list {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.upload-list h3 {
+    margin-bottom: 15px;
+    color: var(--text-color);
+    font-size: 1.2rem;
+}
+
+#fileList {
+    list-style: none;
+}
+
+#fileList li {
+    padding: 10px;
+    margin-bottom: 10px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+#fileList li:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+#fileList li.active {
+    background-color: rgba(98, 0, 238, 0.2);
+    border-left: 4px solid var(--primary-color);
+}
+
+.file-name {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-status {
+    margin-left: 10px;
+    font-size: 0.8rem;
+}
+
+.file-status.pending {
+    color: var(--text-secondary-color);
+}
+
+.file-status.processing {
+    color: #ffab00;
+}
+
+.file-status.complete {
+    color: var(--success-color);
+}
+
+.file-status.error {
+    color: var(--error-color);
+}
+
+/* 可视化区域样式 */
+.visualization-section {
+    background-color: rgba(30, 30, 30, 0.8);
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+}
+
+.currently-playing {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#currentFileName {
+    font-size: 1.5rem;
+    margin-bottom: 15px;
+    color: var(--text-color);
+}
+
+.audio-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.control-btn {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.3s ease;
+}
+
+.control-btn:hover {
+    background-color: #7c4dff;
+}
+
+.control-btn:disabled {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-secondary-color);
+    cursor: not-allowed;
+}
+
+.progress-container {
+    flex: 1;
+    height: 10px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 5px;
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+}
+
+.progress-bar {
+    height: 100%;
+    background-color: var(--secondary-color);
+    width: 0;
+    transition: width 0.1s linear;
+    position: relative;
+}
+
+.progress-bar::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 10px;
+    height: 10px;
+    background-color: var(--primary-color);
+    border-radius: 50%;
+    display: none;
+}
+
+.progress-container:hover .progress-bar::after {
+    display: block;
+}
+
+.visualization-container {
+    margin-bottom: 20px;
+}
+
+.waveform-container, .spectrogram-container {
+    position: relative;
+    width: 100%;
+    height: 150px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+    margin-bottom: 15px;
+    overflow: hidden;
+}
+
+#waveformCanvas, #spectrogramCanvas {
+    width: 100%;
+    height: 100%;
+}
+
+#playhead {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 2px;
+    height: 100%;
+    background-color: var(--primary-color);
+    z-index: 10;
+    display: none;
+}
+
+/* 流派结果样式 */
+.genre-results {
+    padding-top: 15px;
+}
+
+.genre-results h3 {
+    margin-bottom: 15px;
+    color: var(--text-color);
+    font-size: 1.2rem;
+}
+
+.genre-visualization {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.genre-aura {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* enable smooth pulsate and rotation */
+    transition: transform 0.3s ease-out;
+    transform-origin: center center;
+    overflow: hidden;
+}
+
+/* Text overlay inside the aura */
+.genre-aura-text {
+    position: absolute;
+    color: var(--text-color);
+    font-weight: 700;
+    text-shadow: 0 0 5px rgba(0, 0, 0, 0.7);
+    pointer-events: none;
+}
+
+.genre-chart-container {
+    flex: 1;
+    margin-left: 20px;
+    height: 200px;
+}
+
+.genre-details {
+    padding: 15px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+}
+
+#genreList {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+}
+
+.genre-item {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    border-radius: 5px;
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.genre-color {
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+
+.genre-name {
+    flex: 1;
+}
+
+.genre-probability {
+    font-weight: bold;
+}
+
+/* File list genre and color indicators */
+.file-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 10px;
+    flex-shrink: 0;
+}
+
+.file-genre {
+    margin-left: 10px;
+    color: var(--text-secondary-color);
+    font-weight: 500;
+}
+
+/* 加载覆盖层 */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    display: none;
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: var(--primary-color);
+    animation: spin 1s infinite linear;
+    margin-bottom: 15px;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* 响应式设计 */
+@media (max-width: 992px) {
+    .main-content {
+        grid-template-columns: 1fr;
+    }
+    
+    .genre-visualization {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .genre-chart-container {
+        margin-left: 0;
+        margin-top: 20px;
+        width: 100%;
+    }
+}
+
+@media (max-width: 576px) {
+    #genreList {
+        grid-template-columns: 1fr;
+    }
+    
+    .audio-controls {
+        flex-wrap: wrap;
+    }
+    
+    .progress-container {
+        margin: 10px 0;
+        width: 100%;
+    }
+}
