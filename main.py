@@ -26,34 +26,34 @@ if __name__ == '__main__':
     config = {
         'log_dir': os.path.join(project_path, "logs", datetime.datetime.now().strftime("%Y%m%d-%H%M%S")),
         'result_path': os.path.join(project_path, "result"),
-        'model': 'CNN_2D_Attention_Model',
+        'model': 'YOLO11s',
         'args': (10,),
         'seed': 1337,        # the random seed
         'test_ratio': 0.2,   # the ratio of the test set
         'epochs': 500,
-        'batch_size': 1,
+        'batch_size': 8,
         'lr': 0.0001437,    # initial learning rate
         'isDev': False,       # True -> Train new model anyway
         'dataset': {
-            'data_path': './Data/genres_original',
-            'feature_path': './Data/features_30_sec.csv',
+            'data_path': '/home/hyc/gtzan/Data/genres_original',
+            'feature_path': '/home/hyc/gtzan/Data/features_30_sec.csv',
             'type': 'data',  # 'feature' -> Trainset = features; 'data' -> Trainset = Datas
             'Mel': True,     # Using Mel Spectrogram or not
             'Aug': True,     # Adding random noise before every epoch (May slow down the training) or not
             'noise_factor': 0.001, # Valid when Aug == True
             'data_length': 660000,  # If dataset != 'feature',
-            'n_mels': 256,
+            'n_mels': 512,
         },
         'optimizer': torch.optim.AdamW,
         'scheduler': {
             'start_iters': 3,
             'start_factor': 1,
-            'end_factor': 0.2,
+            'end_factor': 0.01,
         },
-        'show': True,       # plotting
+        'show': False,       # plotting
         'fold': 0,           # 0 -> not k-fold; k>0 -> k-fold
-        'summary': False,    # Show summary
-        'workers': 1,       # Number of workers for DataLoader
+        'summary': True,    # Show summary
+        'workers': 4,       # Number of workers for DataLoader
     }
 
     if not os.path.exists(config['result_path']):

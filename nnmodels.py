@@ -54,7 +54,7 @@ class CNN_1D_Model(nn.Module):
     
 # build the ANN model
 class MLP_Model(nn.Module):
-    def __init__(self, input_d, label_d):
+    def __init__(self, input_d, label_d=10):
         super().__init__()
         self.mlp1 = MLP(input_dim=input_d, hidden_dim=1024, output_dim=256, dropout=0.3)
         self.act1 = nn.SiLU()
@@ -139,10 +139,10 @@ class CNN_1D_BiLSTM_Attention_Model(nn.Module):
 
 class Transformer_Encoder_Decoder_Model(nn.Module):
     """使用编码器-解码器结构的Transformer用于序列分类，支持长序列"""
-    def __init__(self, input_dim, num_classes=10, d_model=64, nhead=4, 
-                 num_encoder_layers=3, num_decoder_layers=3, 
-                 dim_feedforward=256, dropout=0.1, max_seq_length=32,
-                 use_segment_pooling=True, segment_length=2048):
+    def __init__(self, input_dim, num_classes=10, d_model=48, nhead=4, 
+                 num_encoder_layers=2, num_decoder_layers=2, 
+                 dim_feedforward=192, dropout=0.1, max_seq_length=32,
+                 use_segment_pooling=True, segment_length=4096):
         super().__init__()
         
         self.d_model = d_model
@@ -303,7 +303,7 @@ class CNN_1D_Transformer_Model(Transformer_Encoder_Decoder_Model):
     def __init__(self, input_dim, num_classes=10, d_model=128, nhead=8, 
                  num_encoder_layers=3, num_decoder_layers=3, 
                  dim_feedforward=512, dropout=0.2, max_seq_length=128,
-                 use_segment_pooling=True, segment_length=2048):
+                 use_segment_pooling=True, segment_length=4096):
         super().__init__(
             input_dim=input_dim,
             num_classes=num_classes,
@@ -320,9 +320,9 @@ class CNN_1D_Transformer_Model(Transformer_Encoder_Decoder_Model):
         
         # CNN特征提取分支
         self.emb = nn.Sequential(
-            Conv(1, 16, 37, 4, 1),
-            Conv(16, 64, 37, 4, 1),
-            Conv(64, d_model, 37, 1)
+            Conv(1, 16, 23, 4, 1),
+            Conv(16, 64, 23, 4, 1),
+            Conv(64, d_model, 23, 1)
         )
     
     def _input_embedding(self, src:torch.Tensor)->torch.Tensor:
@@ -473,6 +473,6 @@ class YOLO11s(nn.Module):
 
 if __name__ == '__main__':
     # model = CNNTransformerClassifier(1, 10).to(device)
-    model = YOLO11s(10).to(device)
+    model = Transformer_Encoder_Decoder_Model(10).to(device)
     model.apply(weight_init)
-    model(torch.randn([48, 512, 1290]).to(device))
+    model(torch.randn([1, 512, 1290]).to(device))

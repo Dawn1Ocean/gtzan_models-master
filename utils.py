@@ -58,8 +58,11 @@ class GenreDataset(Dataset):
                 x = audio_augmentation(x, self.noise_factor)
             if self.mel:
                 x = self._mel(x)
-        x = torch.tensor(x, dtype=torch.float32).to(device)
-        y = torch.tensor(self.y[index], dtype=torch.long).to(device)
+        # Do NOT move tensors to device here. DataLoader worker subprocesses
+        # must not initialize CUDA (causes "Cannot re-initialize CUDA in forked subprocess").
+        # Move tensors to device in the training/testing loops instead.
+        x = torch.tensor(x, dtype=torch.float32)
+        y = torch.tensor(self.y[index], dtype=torch.long)
         return x, y
 
     def __len__(self):

@@ -6,7 +6,17 @@ from sklearn.metrics import confusion_matrix
 __all__ = ('plot_heat_map', 'plot_history')
 
 # confusion matrix
-def plot_heat_map(y_test, y_pred, path, model_name, show=False):
+def plot_heat_map(y_test, y_pred, path, model_name, show=False, labels=None):
+    """Plot and save a confusion matrix heatmap.
+
+    Args:
+        y_test: array-like of true labels (int or str)
+        y_pred: array-like of predicted labels (int or str)
+        path: directory to save the figure
+        model_name: base name for saved file
+        show: whether to call plt.show()
+        labels: optional list of label names to use as ticks (ordered)
+    """
     con_mat = confusion_matrix(y_test, y_pred)
     # normalize
     # con_mat_norm = con_mat.astype('float') / con_mat.sum(axis=1)[:, np.newaxis]
@@ -14,7 +24,10 @@ def plot_heat_map(y_test, y_pred, path, model_name, show=False):
 
     # plot
     plt.figure(figsize=(8, 8))
-    seaborn.heatmap(con_mat, annot=True, fmt='.20g', cmap='Blues')
+    if labels is not None:
+        seaborn.heatmap(con_mat, annot=True, fmt='d', cmap='Blues', xticklabels=labels, yticklabels=labels)
+    else:
+        seaborn.heatmap(con_mat, annot=True, fmt='d', cmap='Blues')
     # plt.xlim(0, con_mat.shape[1])
     # plt.ylim(0, con_mat.shape[0])
     plt.xlabel('Predicted labels')
