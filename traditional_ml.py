@@ -127,8 +127,22 @@ def plot_pca(X, y_true, y_pred, labels, outpath_prefix, n_components=2):
     """
     scaler = StandardScaler()
     Xs = scaler.fit_transform(X)
-    pca = PCA(n_components=n_components)
+    # choose number of components for PCA plotting and explained variance
+    n_features = Xs.shape[1]
+    # keep at least min(n_components, n_features) for transform; for explained variance show up to min(n_features, 20)
+    pca_n_for_transform = min(n_components, n_features)
+    pca = PCA(n_components=pca_n_for_transform)
     Xp = pca.fit_transform(Xs)
+
+    # Also compute a full PCA (up to n_features or up to 20) for explained variance plotting
+    ev_n = min(n_features, max(pca_n_for_transform, 20))
+    try:
+        pca_full = PCA(n_components=ev_n)
+        pca_full.fit(Xs)
+        ev_ratio = pca_full.explained_variance_ratio_
+    except Exception:
+        # fallback to the smaller PCA's explained variance if full fit fails
+        ev_ratio = pca.explained_variance_ratio_
 
     # helper to get display names for a label array
     def disp_names(arr):
@@ -209,6 +223,72 @@ def plot_pca(X, y_true, y_pred, labels, outpath_prefix, n_components=2):
         plt.close()
     else:
         raise ValueError('n_components must be 2 or 3')
+
+    # Plot explained variance (scree) and cumulative explained variance
+    try:
+        ev = ev_ratio
+        comps = list(range(1, len(ev) + 1))
+
+        plt.figure(figsize=(8, 5))
+        sns.barplot(x=comps, y=ev, color='tab:blue')
+        plt.xlabel('Principal Component')
+        plt.ylabel('Explained Variance Ratio')
+        plt.title('PCA Explained Variance (Scree)')
+        plt.xticks(comps)
+        plt.tight_layout()
+        plt.savefig(outpath_prefix + '_pca_explained_variance.png', bbox_inches='tight')
+        plt.close()
+
+        # cumulative
+        cum_ev = np.cumsum(ev)
+        plt.figure(figsize=(8, 5))
+        plt.plot(comps, cum_ev, marker='o')
+        plt.xlabel('Number of Components')
+        plt.ylabel('Cumulative Explained Variance')
+        plt.title('PCA Cumulative Explained Variance')
+        plt.xticks(comps)
+        plt.ylim(0, 1.05)
+        # horizontal line at 0.9 and 0.95 for reference
+        plt.axhline(0.9, color='gray', linestyle='--', linewidth=0.8)
+        plt.axhline(0.95, color='gray', linestyle=':', linewidth=0.8)
+        plt.grid(alpha=0.3)
+        plt.tight_layout()
+        plt.savefig(outpath_prefix + '_pca_cumulative_explained_variance.png', bbox_inches='tight')
+        plt.close()
+
+        # Combined plot: bar (explained variance) + cumulative line (twinx)
+        fig, ax1 = plt.subplots(figsize=(9, 5))
+        # numeric positions for bars so they align with the cumulative line
+        positions = np.arange(1, len(ev) + 1)
+        bar_width = 0.6
+        ax1.bar(positions, ev, width=bar_width, color='tab:blue', align='center')
+        ax1.set_xlabel('Principal Component')
+        ax1.set_ylabel('Explained Variance Ratio', color='tab:blue')
+        ax1.tick_params(axis='y', labelcolor='tab:blue')
+        ax1.set_xticks(positions)
+        ax1.set_xticklabels([str(p) for p in positions])
+
+        ax2 = ax1.twinx()
+        ax2.plot(positions, cum_ev, color='tab:orange', marker='o')
+        ax2.set_ylabel('Cumulative Explained Variance', color='tab:orange')
+        ax2.tick_params(axis='y', labelcolor='tab:orange')
+        ax2.set_ylim(0, 1.05)
+
+        # annotate where cumulative crosses thresholds
+        for thresh in (0.9, 0.95):
+            idxs = [i for i, v in enumerate(cum_ev, start=1) if v >= thresh]
+            if idxs:
+                idx = idxs[0]
+                ax2.axvline(idx, color='gray', linestyle='--', linewidth=0.7)
+                ax2.text(idx, thresh + 0.03, f'{thresh*100:.0f}% at {idx}', color='gray', fontsize=8, ha='center')
+
+        plt.title('PCA Explained Variance and Cumulative')
+        plt.tight_layout()
+        plt.savefig(outpath_prefix + '_pca_explained_and_cumulative.png', bbox_inches='tight')
+        plt.close()
+    except Exception:
+        # don't fail the whole pipeline if plotting explained variance fails
+        pass
 
 
 def main():
